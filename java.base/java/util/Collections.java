@@ -792,7 +792,7 @@ public class Collections {
      *                                       its list-iterator does not support the {@code set} operation.
      * @since 1.4
      */
-    public static void rotate(List<?> list, int distance) {
+    public static void rotate(List<?> list, int distance) {  // todo ??????
         if (list instanceof RandomAccess || list.size() < ROTATE_THRESHOLD) {
             rotate1(list, distance);
         } else {
@@ -867,6 +867,8 @@ public class Collections {
     public static <T> boolean replaceAll(List<T> list, T oldVal, T newVal) {
         boolean result = false;
         int size = list.size();
+
+        /* 判断是否为支持随机访问 比迭代器更快 */
         if (size < REPLACEALL_THRESHOLD || list instanceof RandomAccess) {
             if (oldVal == null) {
                 for (int i = 0; i < size; i++) {
@@ -925,20 +927,23 @@ public class Collections {
      * @since 1.4
      */
     public static int indexOfSubList(List<?> source, List<?> target) {
+        /* 10 - 4 = 6 最多到下标 6 */
         int sourceSize = source.size();
         int targetSize = target.size();
         int maxCandidate = sourceSize - targetSize;
 
-        if (sourceSize < INDEXOFSUBLIST_THRESHOLD ||
-                (source instanceof RandomAccess && target instanceof RandomAccess)) {
+        if (sourceSize < INDEXOFSUBLIST_THRESHOLD || (source instanceof RandomAccess && target instanceof RandomAccess)) {
+            /* 标记 */
             nextCand:
             for (int candidate = 0; candidate <= maxCandidate; candidate++) {
                 for (int i = 0, j = candidate; i < targetSize; i++, j++) {
                     if (!eq(target.get(i), source.get(j))) {
-                        continue nextCand;  // Element mismatch, try next cand
+                        /* Element mismatch, try next cand 数据不匹配时 */
+                        continue nextCand;
                     }
                 }
-                return candidate;  // All elements of candidate matched target
+                /* All elements of candidate matched target */
+                return candidate;
             }
         } else {  // Iterator version of above algorithm
             ListIterator<?> si = source.listIterator();
@@ -949,6 +954,7 @@ public class Collections {
                     if (!eq(ti.next(), si.next())) {
                         // Back up source iterator to next candidate
                         for (int j = 0; j < i; j++) {
+                            /* 返回列表中的前一个元素，并将光标位置向后移动 */
                             si.previous();
                         }
                         continue nextCand;
