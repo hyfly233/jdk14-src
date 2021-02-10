@@ -27,25 +27,22 @@
 
 package java.nio;
 
-import java.util.Objects;
 import jdk.internal.access.foreign.MemorySegmentProxy;
-import jdk.internal.misc.Unsafe;
+
+import java.util.Objects;
 
 class ByteBufferAsDoubleBufferL                  // package-private
-    extends DoubleBuffer
-{
-
+        extends DoubleBuffer {
 
 
     protected final ByteBuffer bb;
 
 
-
     ByteBufferAsDoubleBufferL(ByteBuffer bb, MemorySegmentProxy segment) {   // package-private
 
         super(-1, 0,
-              bb.remaining() >> 3,
-              bb.remaining() >> 3, segment);
+                bb.remaining() >> 3,
+                bb.remaining() >> 3, segment);
         this.bb = bb;
         // enforce limit == capacity
         int cap = this.capacity();
@@ -55,19 +52,16 @@ class ByteBufferAsDoubleBufferL                  // package-private
         address = bb.address;
 
 
-
     }
 
     ByteBufferAsDoubleBufferL(ByteBuffer bb,
-                                     int mark, int pos, int lim, int cap,
-                                     long addr, MemorySegmentProxy segment)
-    {
+                              int mark, int pos, int lim, int cap,
+                              long addr, MemorySegmentProxy segment) {
 
         super(mark, pos, lim, cap, segment);
         this.bb = bb;
         address = addr;
         assert address >= bb.address;
-
 
 
     }
@@ -77,6 +71,7 @@ class ByteBufferAsDoubleBufferL                  // package-private
         return bb.hb;
     }
 
+    @Override
     public DoubleBuffer slice() {
         int pos = this.position();
         int lim = this.limit();
@@ -89,35 +84,35 @@ class ByteBufferAsDoubleBufferL                  // package-private
     public DoubleBuffer slice(int index, int length) {
         Objects.checkFromIndexSize(index, length, limit());
         return new ByteBufferAsDoubleBufferL(bb,
-                                                    -1,
-                                                    0,
-                                                    length,
-                                                    length,
-                                                    byteOffset(index), segment);
+                -1,
+                0,
+                length,
+                length,
+                byteOffset(index), segment);
     }
 
+    @Override
     public DoubleBuffer duplicate() {
         return new ByteBufferAsDoubleBufferL(bb,
-                                                    this.markValue(),
-                                                    this.position(),
-                                                    this.limit(),
-                                                    this.capacity(),
-                                                    address, segment);
+                this.markValue(),
+                this.position(),
+                this.limit(),
+                this.capacity(),
+                address, segment);
     }
 
+    @Override
     public DoubleBuffer asReadOnlyBuffer() {
 
         return new ByteBufferAsDoubleBufferRL(bb,
-                                                 this.markValue(),
-                                                 this.position(),
-                                                 this.limit(),
-                                                 this.capacity(),
-                                                 address, segment);
-
+                this.markValue(),
+                this.position(),
+                this.limit(),
+                this.capacity(),
+                address, segment);
 
 
     }
-
 
 
     private int ix(int i) {
@@ -129,54 +124,48 @@ class ByteBufferAsDoubleBufferL                  // package-private
         return (i << 3) + address;
     }
 
+    @Override
     public double get() {
         checkSegment();
         long x = UNSAFE.getLongUnaligned(bb.hb, byteOffset(nextGetIndex()),
-            false);
+                false);
         return Double.longBitsToDouble(x);
     }
 
+    @Override
     public double get(int i) {
         checkSegment();
         long x = UNSAFE.getLongUnaligned(bb.hb, byteOffset(checkIndex(i)),
-            false);
+                false);
         return Double.longBitsToDouble(x);
     }
 
 
-
-
-
-
-
-
-
-
-
+    @Override
     public DoubleBuffer put(double x) {
 
         checkSegment();
         long y = Double.doubleToRawLongBits(x);
         UNSAFE.putLongUnaligned(bb.hb, byteOffset(nextPutIndex()), y,
-            false);
+                false);
         return this;
-
 
 
     }
 
+    @Override
     public DoubleBuffer put(int i, double x) {
 
         checkSegment();
         long y = Double.doubleToRawLongBits(x);
         UNSAFE.putLongUnaligned(bb.hb, byteOffset(checkIndex(i)), y,
-            false);
+                false);
         return this;
-
 
 
     }
 
+    @Override
     public DoubleBuffer compact() {
 
         int pos = position();
@@ -196,69 +185,26 @@ class ByteBufferAsDoubleBufferL                  // package-private
         return this;
 
 
-
     }
 
+    @Override
     public boolean isDirect() {
         return bb.isDirect();
     }
 
+    @Override
     public boolean isReadOnly() {
         return false;
     }
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    @Override
     public ByteOrder order() {
-
-
 
 
         return ByteOrder.LITTLE_ENDIAN;
 
     }
-
-
-
-
 
 
 }

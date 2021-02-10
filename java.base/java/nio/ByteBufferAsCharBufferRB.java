@@ -27,31 +27,15 @@
 
 package java.nio;
 
-import java.util.Objects;
 import jdk.internal.access.foreign.MemorySegmentProxy;
-import jdk.internal.misc.Unsafe;
+
+import java.util.Objects;
 
 class ByteBufferAsCharBufferRB                  // package-private
-    extends ByteBufferAsCharBufferB
-{
-
-
-
-
-
+        extends ByteBufferAsCharBufferB {
 
 
     ByteBufferAsCharBufferRB(ByteBuffer bb, MemorySegmentProxy segment) {   // package-private
-
-
-
-
-
-
-
-
-
-
 
 
         super(bb, segment);
@@ -59,13 +43,8 @@ class ByteBufferAsCharBufferRB                  // package-private
     }
 
     ByteBufferAsCharBufferRB(ByteBuffer bb,
-                                     int mark, int pos, int lim, int cap,
-                                     long addr, MemorySegmentProxy segment)
-    {
-
-
-
-
+                             int mark, int pos, int lim, int cap,
+                             long addr, MemorySegmentProxy segment) {
 
 
         super(bb, mark, pos, lim, cap, addr, segment);
@@ -77,6 +56,7 @@ class ByteBufferAsCharBufferRB                  // package-private
         return bb.hb;
     }
 
+    @Override
     public CharBuffer slice() {
         int pos = this.position();
         int lim = this.limit();
@@ -89,29 +69,25 @@ class ByteBufferAsCharBufferRB                  // package-private
     public CharBuffer slice(int index, int length) {
         Objects.checkFromIndexSize(index, length, limit());
         return new ByteBufferAsCharBufferRB(bb,
-                                                    -1,
-                                                    0,
-                                                    length,
-                                                    length,
-                                                    byteOffset(index), segment);
+                -1,
+                0,
+                length,
+                length,
+                byteOffset(index), segment);
     }
 
+    @Override
     public CharBuffer duplicate() {
         return new ByteBufferAsCharBufferRB(bb,
-                                                    this.markValue(),
-                                                    this.position(),
-                                                    this.limit(),
-                                                    this.capacity(),
-                                                    address, segment);
+                this.markValue(),
+                this.position(),
+                this.limit(),
+                this.capacity(),
+                address, segment);
     }
 
+    @Override
     public CharBuffer asReadOnlyBuffer() {
-
-
-
-
-
-
 
 
         return duplicate();
@@ -119,96 +95,42 @@ class ByteBufferAsCharBufferRB                  // package-private
     }
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    @Override
     public CharBuffer put(char x) {
 
 
-
-
-
-
-
         throw new ReadOnlyBufferException();
 
     }
 
+    @Override
     public CharBuffer put(int i, char x) {
 
 
-
-
-
-
-
         throw new ReadOnlyBufferException();
 
     }
 
+    @Override
     public CharBuffer compact() {
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
         throw new ReadOnlyBufferException();
 
     }
 
+    @Override
     public boolean isDirect() {
         return bb.isDirect();
     }
 
+    @Override
     public boolean isReadOnly() {
         return true;
     }
 
 
-
+    @Override
     public String toString(int start, int end) {
         Objects.checkFromToIndex(start, end, limit());
         try {
@@ -228,6 +150,7 @@ class ByteBufferAsCharBufferRB                  // package-private
 
     // --- Methods to support CharSequence ---
 
+    @Override
     public CharBuffer subSequence(int start, int end) {
         int pos = position();
         int lim = limit();
@@ -237,26 +160,24 @@ class ByteBufferAsCharBufferRB                  // package-private
 
         Objects.checkFromToIndex(start, end, len);
         return new ByteBufferAsCharBufferRB(bb,
-                                                  -1,
-                                                  pos + start,
-                                                  pos + end,
-                                                  capacity(),
-                                                  address, segment);
+                -1,
+                pos + start,
+                pos + end,
+                capacity(),
+                address, segment);
     }
 
 
-
-
+    @Override
     public ByteOrder order() {
 
         return ByteOrder.BIG_ENDIAN;
 
 
-
-
     }
 
 
+    @Override
     ByteOrder charRegionOrder() {
         return order();
     }

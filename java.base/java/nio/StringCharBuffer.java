@@ -30,8 +30,7 @@ import java.util.Objects;
 // ## If the sequence is a string, use reflection to share its array
 
 class StringCharBuffer                                  // package-private
-    extends CharBuffer
-{
+        extends CharBuffer {
     CharSequence str;
 
     StringCharBuffer(CharSequence s, int start, int end) { // package-private
@@ -42,27 +41,28 @@ class StringCharBuffer                                  // package-private
         this.isReadOnly = true;
     }
 
+    @Override
     public CharBuffer slice() {
         int pos = this.position();
         int lim = this.limit();
         int rem = (pos <= lim ? lim - pos : 0);
         return new StringCharBuffer(str,
-                                    -1,
-                                    0,
-                                    rem,
-                                    rem,
-                                    offset + pos);
+                -1,
+                0,
+                rem,
+                rem,
+                offset + pos);
     }
 
     @Override
     public CharBuffer slice(int index, int length) {
         Objects.checkFromIndexSize(index, length, limit());
         return new StringCharBuffer(str,
-                                    -1,
-                                    0,
-                                    length,
-                                    length,
-                                    offset + index);
+                -1,
+                0,
+                length,
+                length,
+                offset + index);
     }
 
     private StringCharBuffer(CharSequence s,
@@ -76,92 +76,111 @@ class StringCharBuffer                                  // package-private
         this.isReadOnly = true;
     }
 
+    @Override
     public CharBuffer duplicate() {
         return new StringCharBuffer(str, markValue(),
-                                    position(), limit(), capacity(), offset);
+                position(), limit(), capacity(), offset);
     }
 
+    @Override
     public CharBuffer asReadOnlyBuffer() {
         return duplicate();
     }
 
+    @Override
     public final char get() {
         return str.charAt(nextGetIndex() + offset);
     }
 
+    @Override
     public final char get(int index) {
         return str.charAt(checkIndex(index) + offset);
     }
 
+    @Override
     char getUnchecked(int index) {
         return str.charAt(index + offset);
     }
 
     // ## Override bulk get methods for better performance
 
+    @Override
     public final CharBuffer put(char c) {
         throw new ReadOnlyBufferException();
     }
 
+    @Override
     public final CharBuffer put(int index, char c) {
         throw new ReadOnlyBufferException();
     }
 
+    @Override
     public final CharBuffer compact() {
         throw new ReadOnlyBufferException();
     }
 
+    @Override
     public final boolean isReadOnly() {
         return true;
     }
 
+    @Override
     final String toString(int start, int end) {
         return str.subSequence(start + offset, end + offset).toString();
     }
 
+    @Override
     public final CharBuffer subSequence(int start, int end) {
         try {
             int pos = position();
             return new StringCharBuffer(str,
-                                        -1,
-                                        pos + checkIndex(start, pos),
-                                        pos + checkIndex(end, pos),
-                                        capacity(),
-                                        offset);
+                    -1,
+                    pos + checkIndex(start, pos),
+                    pos + checkIndex(end, pos),
+                    capacity(),
+                    offset);
         } catch (IllegalArgumentException x) {
             throw new IndexOutOfBoundsException();
         }
     }
 
+    @Override
     public boolean isDirect() {
         return false;
     }
 
+    @Override
     public ByteOrder order() {
         return ByteOrder.nativeOrder();
     }
 
+    @Override
     ByteOrder charRegionOrder() {
         return null;
     }
 
+    @Override
     public boolean equals(Object ob) {
-        if (this == ob)
+        if (this == ob) {
             return true;
-        if (!(ob instanceof CharBuffer))
+        }
+        if (!(ob instanceof CharBuffer)) {
             return false;
-        CharBuffer that = (CharBuffer)ob;
-        if (this.remaining() != that.remaining())
+        }
+        CharBuffer that = (CharBuffer) ob;
+        if (this.remaining() != that.remaining()) {
             return false;
+        }
         return BufferMismatch.mismatch(this, this.position(),
-                                       that, that.position(),
-                                       this.remaining()) < 0;
+                that, that.position(),
+                this.remaining()) < 0;
     }
 
+    @Override
     public int compareTo(CharBuffer that) {
         int i = BufferMismatch.mismatch(this, this.position(),
-                                        that, that.position(),
-                                        Math.min(this.remaining(), that.remaining()));
+                that, that.position(),
+                Math.min(this.remaining(), that.remaining()));
         if (i >= 0) {
             return Character.compare(this.get(this.position() + i), that.get(that.position() + i));
         }

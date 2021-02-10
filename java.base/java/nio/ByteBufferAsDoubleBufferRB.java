@@ -27,31 +27,15 @@
 
 package java.nio;
 
-import java.util.Objects;
 import jdk.internal.access.foreign.MemorySegmentProxy;
-import jdk.internal.misc.Unsafe;
+
+import java.util.Objects;
 
 class ByteBufferAsDoubleBufferRB                  // package-private
-    extends ByteBufferAsDoubleBufferB
-{
-
-
-
-
-
+        extends ByteBufferAsDoubleBufferB {
 
 
     ByteBufferAsDoubleBufferRB(ByteBuffer bb, MemorySegmentProxy segment) {   // package-private
-
-
-
-
-
-
-
-
-
-
 
 
         super(bb, segment);
@@ -59,13 +43,8 @@ class ByteBufferAsDoubleBufferRB                  // package-private
     }
 
     ByteBufferAsDoubleBufferRB(ByteBuffer bb,
-                                     int mark, int pos, int lim, int cap,
-                                     long addr, MemorySegmentProxy segment)
-    {
-
-
-
-
+                               int mark, int pos, int lim, int cap,
+                               long addr, MemorySegmentProxy segment) {
 
 
         super(bb, mark, pos, lim, cap, addr, segment);
@@ -77,6 +56,7 @@ class ByteBufferAsDoubleBufferRB                  // package-private
         return bb.hb;
     }
 
+    @Override
     public DoubleBuffer slice() {
         int pos = this.position();
         int lim = this.limit();
@@ -89,29 +69,25 @@ class ByteBufferAsDoubleBufferRB                  // package-private
     public DoubleBuffer slice(int index, int length) {
         Objects.checkFromIndexSize(index, length, limit());
         return new ByteBufferAsDoubleBufferRB(bb,
-                                                    -1,
-                                                    0,
-                                                    length,
-                                                    length,
-                                                    byteOffset(index), segment);
+                -1,
+                0,
+                length,
+                length,
+                byteOffset(index), segment);
     }
 
+    @Override
     public DoubleBuffer duplicate() {
         return new ByteBufferAsDoubleBufferRB(bb,
-                                                    this.markValue(),
-                                                    this.position(),
-                                                    this.limit(),
-                                                    this.capacity(),
-                                                    address, segment);
+                this.markValue(),
+                this.position(),
+                this.limit(),
+                this.capacity(),
+                address, segment);
     }
 
+    @Override
     public DoubleBuffer asReadOnlyBuffer() {
-
-
-
-
-
-
 
 
         return duplicate();
@@ -119,146 +95,48 @@ class ByteBufferAsDoubleBufferRB                  // package-private
     }
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    @Override
     public DoubleBuffer put(double x) {
 
 
-
-
-
-
-
         throw new ReadOnlyBufferException();
 
     }
 
+    @Override
     public DoubleBuffer put(int i, double x) {
 
 
-
-
-
-
-
         throw new ReadOnlyBufferException();
 
     }
 
+    @Override
     public DoubleBuffer compact() {
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
         throw new ReadOnlyBufferException();
 
     }
 
+    @Override
     public boolean isDirect() {
         return bb.isDirect();
     }
 
+    @Override
     public boolean isReadOnly() {
         return true;
     }
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    @Override
     public ByteOrder order() {
 
         return ByteOrder.BIG_ENDIAN;
 
 
-
-
     }
-
-
-
-
 
 
 }

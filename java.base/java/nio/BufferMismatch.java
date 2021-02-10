@@ -34,19 +34,23 @@ final class BufferMismatch {
     static int mismatch(ByteBuffer a, int aOff, ByteBuffer b, int bOff, int length) {
         int i = 0;
         if (length > 7) {
-            if (a.get(aOff) != b.get(bOff))
+            if (a.get(aOff) != b.get(bOff)) {
                 return 0;
+            }
             i = ArraysSupport.vectorizedMismatch(
                     a.base(), a.address + aOff,
                     b.base(), b.address + bOff,
                     length,
                     ArraysSupport.LOG2_ARRAY_BYTE_INDEX_SCALE);
-            if (i >= 0) return i;
+            if (i >= 0) {
+                return i;
+            }
             i = length - ~i;
         }
         for (; i < length; i++) {
-            if (a.get(aOff + i) != b.get(bOff + i))
+            if (a.get(aOff + i) != b.get(bOff + i)) {
                 return i;
+            }
         }
         return -1;
     }
@@ -57,20 +61,24 @@ final class BufferMismatch {
         // vectorized mismatch. If either buffer is a StringCharBuffer
         // (order is null) then the slow path is taken
         if (length > 3 && a.charRegionOrder() == b.charRegionOrder()
-            && a.charRegionOrder() != null && b.charRegionOrder() != null) {
-            if (a.get(aOff) != b.get(bOff))
+                && a.charRegionOrder() != null && b.charRegionOrder() != null) {
+            if (a.get(aOff) != b.get(bOff)) {
                 return 0;
+            }
             i = ArraysSupport.vectorizedMismatch(
                     a.base(), a.address + (aOff << ArraysSupport.LOG2_ARRAY_CHAR_INDEX_SCALE),
                     b.base(), b.address + (bOff << ArraysSupport.LOG2_ARRAY_CHAR_INDEX_SCALE),
                     length,
                     ArraysSupport.LOG2_ARRAY_CHAR_INDEX_SCALE);
-            if (i >= 0) return i;
+            if (i >= 0) {
+                return i;
+            }
             i = length - ~i;
         }
         for (; i < length; i++) {
-            if (a.get(aOff + i) != b.get(bOff + i))
+            if (a.get(aOff + i) != b.get(bOff + i)) {
                 return i;
+            }
         }
         return -1;
     }
@@ -78,19 +86,23 @@ final class BufferMismatch {
     static int mismatch(ShortBuffer a, int aOff, ShortBuffer b, int bOff, int length) {
         int i = 0;
         if (length > 3 && a.order() == b.order()) {
-            if (a.get(aOff) != b.get(bOff))
+            if (a.get(aOff) != b.get(bOff)) {
                 return 0;
+            }
             i = ArraysSupport.vectorizedMismatch(
                     a.base(), a.address + (aOff << ArraysSupport.LOG2_ARRAY_SHORT_INDEX_SCALE),
                     b.base(), b.address + (bOff << ArraysSupport.LOG2_ARRAY_SHORT_INDEX_SCALE),
                     length,
                     ArraysSupport.LOG2_ARRAY_SHORT_INDEX_SCALE);
-            if (i >= 0) return i;
+            if (i >= 0) {
+                return i;
+            }
             i = length - ~i;
         }
         for (; i < length; i++) {
-            if (a.get(aOff + i) != b.get(bOff + i))
+            if (a.get(aOff + i) != b.get(bOff + i)) {
                 return i;
+            }
         }
         return -1;
     }
@@ -98,19 +110,23 @@ final class BufferMismatch {
     static int mismatch(IntBuffer a, int aOff, IntBuffer b, int bOff, int length) {
         int i = 0;
         if (length > 1 && a.order() == b.order()) {
-            if (a.get(aOff) != b.get(bOff))
+            if (a.get(aOff) != b.get(bOff)) {
                 return 0;
+            }
             i = ArraysSupport.vectorizedMismatch(
                     a.base(), a.address + (aOff << ArraysSupport.LOG2_ARRAY_INT_INDEX_SCALE),
                     b.base(), b.address + (bOff << ArraysSupport.LOG2_ARRAY_INT_INDEX_SCALE),
                     length,
                     ArraysSupport.LOG2_ARRAY_INT_INDEX_SCALE);
-            if (i >= 0) return i;
+            if (i >= 0) {
+                return i;
+            }
             i = length - ~i;
         }
         for (; i < length; i++) {
-            if (a.get(aOff + i) != b.get(bOff + i))
+            if (a.get(aOff + i) != b.get(bOff + i)) {
                 return i;
+            }
         }
         return -1;
     }
@@ -131,8 +147,9 @@ final class BufferMismatch {
                 // is not associated with +0 and -0
                 float av = a.get(aOff + i);
                 float bv = b.get(bOff + i);
-                if (av != bv && (!Float.isNaN(av) || !Float.isNaN(bv)))
+                if (av != bv && (!Float.isNaN(av) || !Float.isNaN(bv))) {
                     return i;
+                }
 
                 // Fall back to slow mechanism
                 // ISSUE: Consider looping over vectorizedMismatch adjusting ranges
@@ -147,8 +164,9 @@ final class BufferMismatch {
         for (; i < length; i++) {
             float av = a.get(aOff + i);
             float bv = b.get(bOff + i);
-            if (av != bv && (!Float.isNaN(av) || !Float.isNaN(bv)))
+            if (av != bv && (!Float.isNaN(av) || !Float.isNaN(bv))) {
                 return i;
+            }
         }
         return -1;
     }
@@ -156,8 +174,9 @@ final class BufferMismatch {
     static int mismatch(LongBuffer a, int aOff, LongBuffer b, int bOff, int length) {
         int i = 0;
         if (length > 0 && a.order() == b.order()) {
-            if (a.get(aOff) != b.get(bOff))
+            if (a.get(aOff) != b.get(bOff)) {
                 return 0;
+            }
             i = ArraysSupport.vectorizedMismatch(
                     a.base(), a.address + (aOff << ArraysSupport.LOG2_ARRAY_LONG_INDEX_SCALE),
                     b.base(), b.address + (bOff << ArraysSupport.LOG2_ARRAY_LONG_INDEX_SCALE),
@@ -166,8 +185,9 @@ final class BufferMismatch {
             return i >= 0 ? i : -1;
         }
         for (; i < length; i++) {
-            if (a.get(aOff + i) != b.get(bOff + i))
+            if (a.get(aOff + i) != b.get(bOff + i)) {
                 return i;
+            }
         }
         return -1;
     }
@@ -188,8 +208,9 @@ final class BufferMismatch {
                 // is not associated with +0 and -0
                 double av = a.get(aOff + i);
                 double bv = b.get(bOff + i);
-                if (av != bv && (!Double.isNaN(av) || !Double.isNaN(bv)))
+                if (av != bv && (!Double.isNaN(av) || !Double.isNaN(bv))) {
                     return i;
+                }
 
                 // Fall back to slow mechanism
                 // ISSUE: Consider looping over vectorizedMismatch adjusting ranges
@@ -204,8 +225,9 @@ final class BufferMismatch {
         for (; i < length; i++) {
             double av = a.get(aOff + i);
             double bv = b.get(bOff + i);
-            if (av != bv && (!Double.isNaN(av) || !Double.isNaN(bv)))
+            if (av != bv && (!Double.isNaN(av) || !Double.isNaN(bv))) {
                 return i;
+            }
         }
         return -1;
     }

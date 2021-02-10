@@ -43,16 +43,16 @@ import java.util.Spliterator;
  *
  * <blockquote>
  *
- *   <p> A buffer's <i>capacity</i> is the number of elements it contains.  The
- *   capacity of a buffer is never negative and never changes.  </p>
+ * <p> A buffer's <i>capacity</i> is the number of elements it contains.  The
+ * capacity of a buffer is never negative and never changes.  </p>
  *
- *   <p> A buffer's <i>limit</i> is the index of the first element that should
- *   not be read or written.  A buffer's limit is never negative and is never
- *   greater than its capacity.  </p>
+ * <p> A buffer's <i>limit</i> is the index of the first element that should
+ * not be read or written.  A buffer's limit is never negative and is never
+ * greater than its capacity.  </p>
  *
- *   <p> A buffer's <i>position</i> is the index of the next element to be
- *   read or written.  A buffer's position is never negative and is never
- *   greater than its limit.  </p>
+ * <p> A buffer's <i>position</i> is the index of the next element to be
+ * read or written.  A buffer's position is never negative and is never
+ * greater than its limit.  </p>
  *
  * </blockquote>
  *
@@ -66,17 +66,17 @@ import java.util.Spliterator;
  *
  * <blockquote>
  *
- *   <p> <i>Relative</i> operations read or write one or more elements starting
- *   at the current position and then increment the position by the number of
- *   elements transferred.  If the requested transfer exceeds the limit then a
- *   relative <i>get</i> operation throws a {@link BufferUnderflowException}
- *   and a relative <i>put</i> operation throws a {@link
- *   BufferOverflowException}; in either case, no data is transferred.  </p>
+ * <p> <i>Relative</i> operations read or write one or more elements starting
+ * at the current position and then increment the position by the number of
+ * elements transferred.  If the requested transfer exceeds the limit then a
+ * relative <i>get</i> operation throws a {@link BufferUnderflowException}
+ * and a relative <i>put</i> operation throws a {@link
+ * BufferOverflowException}; in either case, no data is transferred.  </p>
  *
- *   <p> <i>Absolute</i> operations take an explicit element index and do not
- *   affect the position.  Absolute <i>get</i> and <i>put</i> operations throw
- *   an {@link IndexOutOfBoundsException} if the index argument exceeds the
- *   limit.  </p>
+ * <p> <i>Absolute</i> operations take an explicit element index and do not
+ * affect the position.  Absolute <i>get</i> and <i>put</i> operations throw
+ * an {@link IndexOutOfBoundsException} if the index argument exceeds the
+ * limit.  </p>
  *
  * </blockquote>
  *
@@ -102,11 +102,11 @@ import java.util.Spliterator;
  * capacity values:
  *
  * <blockquote>
- *     {@code 0} {@code <=}
- *     <i>mark</i> {@code <=}
- *     <i>position</i> {@code <=}
- *     <i>limit</i> {@code <=}
- *     <i>capacity</i>
+ * {@code 0} {@code <=}
+ * <i>mark</i> {@code <=}
+ * <i>position</i> {@code <=}
+ * <i>limit</i> {@code <=}
+ * <i>capacity</i>
  * </blockquote>
  *
  * <p> A newly-created buffer always has a position of zero and a mark that is
@@ -136,7 +136,7 @@ import java.util.Spliterator;
  *   it already contains: It leaves the limit unchanged and sets the position
  *   to zero.  </p></li>
  *
- *   <li><p> The {@link #slice} and {@link #slice(int,int) slice(index,length)}
+ *   <li><p> The {@link #slice} and {@link #slice(int, int) slice(index,length)}
  *   methods create a subsequence of a buffer: They leave the limit and the
  *   position unchanged. </p></li>
  *
@@ -174,12 +174,11 @@ import java.util.Spliterator;
  * b.flip();
  * b.position(23);
  * b.limit(42);</pre></blockquote>
- *
+ * <p>
  * can be replaced by the single, more compact statement
  *
  * <blockquote><pre>
  * b.flip().position(23).limit(42);</pre></blockquote>
- *
  *
  * @author Mark Reinhold
  * @author JSR-51 Expert Group
@@ -195,7 +194,7 @@ public abstract class Buffer {
      * maintained in Buffers.
      */
     static final int SPLITERATOR_CHARACTERISTICS =
-        Spliterator.SIZED | Spliterator.SUBSIZED | Spliterator.ORDERED;
+            Spliterator.SIZED | Spliterator.SUBSIZED | Spliterator.ORDERED;
 
     // Invariants: mark <= position <= limit <= capacity
     private int mark = -1;
@@ -231,16 +230,18 @@ public abstract class Buffer {
     // after checking invariants.
     //
     Buffer(int mark, int pos, int lim, int cap, MemorySegmentProxy segment) {       // package-private
-        if (cap < 0)
+        if (cap < 0) {
             throw createCapacityException(cap);
+        }
         this.capacity = cap;
         this.segment = segment;
         limit(lim);
         position(pos);
         if (mark >= 0) {
-            if (mark > pos)
+            if (mark > pos) {
                 throw new IllegalArgumentException("mark > position: ("
-                                                   + mark + " > " + pos + ")");
+                        + mark + " > " + pos + ")");
+            }
             this.mark = mark;
         }
     }
@@ -251,8 +252,8 @@ public abstract class Buffer {
      * {@code put(src)} when the parameter is the {@code Buffer} on which the
      * method is being invoked.
      *
-     * @return  IllegalArgumentException
-     *          With a message indicating equal source and target buffers
+     * @return IllegalArgumentException
+     * With a message indicating equal source and target buffers
      */
     static IllegalArgumentException createSameBufferException() {
         return new IllegalArgumentException("The source buffer is this buffer");
@@ -261,22 +262,19 @@ public abstract class Buffer {
     /**
      * Verify that the capacity is nonnegative.
      *
-     * @param  capacity
-     *         The new buffer's capacity, in $type$s
-     *
-     * @throws IllegalArgumentException
-     *         If the {@code capacity} is a negative integer
+     * @param capacity The new buffer's capacity, in $type$s
+     * @throws IllegalArgumentException If the {@code capacity} is a negative integer
      */
     static IllegalArgumentException createCapacityException(int capacity) {
         assert capacity < 0 : "capacity expected to be negative";
         return new IllegalArgumentException("capacity < 0: ("
-            + capacity + " < 0)");
+                + capacity + " < 0)");
     }
 
     /**
      * Returns this buffer's capacity.
      *
-     * @return  The capacity of this buffer
+     * @return The capacity of this buffer
      */
     public final int capacity() {
         return capacity;
@@ -285,7 +283,7 @@ public abstract class Buffer {
     /**
      * Returns this buffer's position.
      *
-     * @return  The position of this buffer
+     * @return The position of this buffer
      */
     public final int position() {
         return position;
@@ -295,31 +293,27 @@ public abstract class Buffer {
      * Sets this buffer's position.  If the mark is defined and larger than the
      * new position then it is discarded.
      *
-     * @param  newPosition
-     *         The new position value; must be non-negative
-     *         and no larger than the current limit
-     *
-     * @return  This buffer
-     *
-     * @throws  IllegalArgumentException
-     *          If the preconditions on {@code newPosition} do not hold
+     * @param newPosition The new position value; must be non-negative
+     *                    and no larger than the current limit
+     * @return This buffer
+     * @throws IllegalArgumentException If the preconditions on {@code newPosition} do not hold
      */
     public Buffer position(int newPosition) {
-        if (newPosition > limit | newPosition < 0)
+        if (newPosition > limit | newPosition < 0) {
             throw createPositionException(newPosition);
+        }
         position = newPosition;
-        if (mark > position) mark = -1;
+        if (mark > position) {
+            mark = -1;
+        }
         return this;
     }
 
     /**
      * Verify that {@code 0 < newPosition <= limit}
      *
-     * @param newPosition
-     *        The new position value
-     *
-     * @throws IllegalArgumentException
-     *         If the specified position is out of bounds.
+     * @param newPosition The new position value
+     * @throws IllegalArgumentException If the specified position is out of bounds.
      */
     private IllegalArgumentException createPositionException(int newPosition) {
         String msg = null;
@@ -337,7 +331,7 @@ public abstract class Buffer {
     /**
      * Returns this buffer's limit.
      *
-     * @return  The limit of this buffer
+     * @return The limit of this buffer
      */
     public final int limit() {
         return limit;
@@ -348,32 +342,30 @@ public abstract class Buffer {
      * then it is set to the new limit.  If the mark is defined and larger than
      * the new limit then it is discarded.
      *
-     * @param  newLimit
-     *         The new limit value; must be non-negative
-     *         and no larger than this buffer's capacity
-     *
-     * @return  This buffer
-     *
-     * @throws  IllegalArgumentException
-     *          If the preconditions on {@code newLimit} do not hold
+     * @param newLimit The new limit value; must be non-negative
+     *                 and no larger than this buffer's capacity
+     * @return This buffer
+     * @throws IllegalArgumentException If the preconditions on {@code newLimit} do not hold
      */
     public Buffer limit(int newLimit) {
-        if (newLimit > capacity | newLimit < 0)
+        if (newLimit > capacity | newLimit < 0) {
             throw createLimitException(newLimit);
+        }
         limit = newLimit;
-        if (position > newLimit) position = newLimit;
-        if (mark > newLimit) mark = -1;
+        if (position > newLimit) {
+            position = newLimit;
+        }
+        if (mark > newLimit) {
+            mark = -1;
+        }
         return this;
     }
 
     /**
      * Verify that {@code 0 < newLimit <= capacity}
      *
-     * @param newLimit
-     *        The new limit value
-     *
-     * @throws IllegalArgumentException
-     *         If the specified limit is out of bounds.
+     * @param newLimit The new limit value
+     * @throws IllegalArgumentException If the specified limit is out of bounds.
      */
     private IllegalArgumentException createLimitException(int newLimit) {
         String msg = null;
@@ -391,7 +383,7 @@ public abstract class Buffer {
     /**
      * Sets this buffer's mark at its position.
      *
-     * @return  This buffer
+     * @return This buffer
      */
     public Buffer mark() {
         mark = position;
@@ -404,15 +396,14 @@ public abstract class Buffer {
      * <p> Invoking this method neither changes nor discards the mark's
      * value. </p>
      *
-     * @return  This buffer
-     *
-     * @throws  InvalidMarkException
-     *          If the mark has not been set
+     * @return This buffer
+     * @throws InvalidMarkException If the mark has not been set
      */
     public Buffer reset() {
         int m = mark;
-        if (m < 0)
+        if (m < 0) {
             throw new InvalidMarkException();
+        }
         position = m;
         return this;
     }
@@ -432,7 +423,7 @@ public abstract class Buffer {
      * is named as if it did because it will most often be used in situations
      * in which that might as well be the case. </p>
      *
-     * @return  This buffer
+     * @return This buffer
      */
     public Buffer clear() {
         position = 0;
@@ -460,7 +451,7 @@ public abstract class Buffer {
      * java.nio.ByteBuffer#compact compact} method when transferring data from
      * one place to another.  </p>
      *
-     * @return  This buffer
+     * @return This buffer
      */
     public Buffer flip() {
         limit = position;
@@ -482,7 +473,7 @@ public abstract class Buffer {
      * buf.rewind();      // Rewind buffer
      * buf.get(array);    // Copy data into array</pre></blockquote>
      *
-     * @return  This buffer
+     * @return This buffer
      */
     public Buffer rewind() {
         position = 0;
@@ -494,7 +485,7 @@ public abstract class Buffer {
      * Returns the number of elements between the current position and the
      * limit.
      *
-     * @return  The number of elements remaining in this buffer
+     * @return The number of elements remaining in this buffer
      */
     public final int remaining() {
         return limit - position;
@@ -504,8 +495,8 @@ public abstract class Buffer {
      * Tells whether there are any elements between the current position and
      * the limit.
      *
-     * @return  {@code true} if, and only if, there is at least one element
-     *          remaining in this buffer
+     * @return {@code true} if, and only if, there is at least one element
+     * remaining in this buffer
      */
     public final boolean hasRemaining() {
         return position < limit;
@@ -514,7 +505,7 @@ public abstract class Buffer {
     /**
      * Tells whether or not this buffer is read-only.
      *
-     * @return  {@code true} if, and only if, this buffer is read-only
+     * @return {@code true} if, and only if, this buffer is read-only
      */
     public abstract boolean isReadOnly();
 
@@ -526,9 +517,8 @@ public abstract class Buffer {
      * and {@link #arrayOffset() arrayOffset} methods may safely be invoked.
      * </p>
      *
-     * @return  {@code true} if, and only if, this buffer
-     *          is backed by an array and is not read-only
-     *
+     * @return {@code true} if, and only if, this buffer
+     * is backed by an array and is not read-only
      * @since 1.6
      */
     public abstract boolean hasArray();
@@ -548,14 +538,9 @@ public abstract class Buffer {
      * method in order to ensure that this buffer has an accessible backing
      * array.  </p>
      *
-     * @return  The array that backs this buffer
-     *
-     * @throws  ReadOnlyBufferException
-     *          If this buffer is backed by an array but is read-only
-     *
-     * @throws  UnsupportedOperationException
-     *          If this buffer is not backed by an accessible array
-     *
+     * @return The array that backs this buffer
+     * @throws ReadOnlyBufferException       If this buffer is backed by an array but is read-only
+     * @throws UnsupportedOperationException If this buffer is not backed by an accessible array
      * @since 1.6
      */
     public abstract Object array();
@@ -571,15 +556,10 @@ public abstract class Buffer {
      * method in order to ensure that this buffer has an accessible backing
      * array.  </p>
      *
-     * @return  The offset within this buffer's array
-     *          of the first element of the buffer
-     *
-     * @throws  ReadOnlyBufferException
-     *          If this buffer is backed by an array but is read-only
-     *
-     * @throws  UnsupportedOperationException
-     *          If this buffer is not backed by an accessible array
-     *
+     * @return The offset within this buffer's array
+     * of the first element of the buffer
+     * @throws ReadOnlyBufferException       If this buffer is backed by an array but is read-only
+     * @throws UnsupportedOperationException If this buffer is not backed by an accessible array
      * @since 1.6
      */
     public abstract int arrayOffset();
@@ -588,8 +568,7 @@ public abstract class Buffer {
      * Tells whether or not this buffer is
      * <a href="ByteBuffer.html#direct"><i>direct</i></a>.
      *
-     * @return  {@code true} if, and only if, this buffer is direct
-     *
+     * @return {@code true} if, and only if, this buffer is direct
      * @since 1.6
      */
     public abstract boolean isDirect();
@@ -609,8 +588,7 @@ public abstract class Buffer {
      * direct, and it will be read-only if, and only if, this buffer is
      * read-only.  </p>
      *
-     * @return  The new buffer
-     *
+     * @return The new buffer
      * @since 9
      */
     public abstract Buffer slice();
@@ -629,21 +607,14 @@ public abstract class Buffer {
      * be direct if, and only if, this buffer is direct, and it will be
      * read-only if, and only if, this buffer is read-only.  </p>
      *
-     * @param   index
-     *          The position in this buffer at which the content of the new
-     *          buffer will start; must be non-negative and no larger than
-     *          {@link #limit() limit()}
-     *
-     * @param   length
-     *          The number of elements the new buffer will contain; must be
-     *          non-negative and no larger than {@code limit() - index}
-     *
-     * @return  The new buffer
-     *
-     * @throws  IndexOutOfBoundsException
-     *          If {@code index} is negative or greater than {@code limit()},
-     *          {@code length} is negative, or {@code length > limit() - index}
-     *
+     * @param index  The position in this buffer at which the content of the new
+     *               buffer will start; must be non-negative and no larger than
+     *               {@link #limit() limit()}
+     * @param length The number of elements the new buffer will contain; must be
+     *               non-negative and no larger than {@code limit() - index}
+     * @return The new buffer
+     * @throws IndexOutOfBoundsException If {@code index} is negative or greater than {@code limit()},
+     *                                   {@code length} is negative, or {@code length > limit() - index}
      * @since 13
      */
     public abstract Buffer slice(int index, int length);
@@ -661,8 +632,7 @@ public abstract class Buffer {
      * only if, this buffer is direct, and it will be read-only if, and only if,
      * this buffer is read-only.  </p>
      *
-     * @return  The new buffer
-     *
+     * @return The new buffer
      * @since 9
      */
     public abstract Buffer duplicate();
@@ -671,7 +641,6 @@ public abstract class Buffer {
     // -- Package-private methods for bounds checking, etc. --
 
     /**
-     *
      * @return the base reference, paired with the address
      * field, which in combination can be used for unsafe access into a heap
      * buffer or direct byte buffer (and views of).
@@ -683,20 +652,22 @@ public abstract class Buffer {
      * BufferUnderflowException} if it is not smaller than the limit, and then
      * increments the position.
      *
-     * @return  The current position value, before it is incremented
+     * @return The current position value, before it is incremented
      */
     final int nextGetIndex() {                          // package-private
         int p = position;
-        if (p >= limit)
+        if (p >= limit) {
             throw new BufferUnderflowException();
+        }
         position = p + 1;
         return p;
     }
 
     final int nextGetIndex(int nb) {                    // package-private
         int p = position;
-        if (limit - p < nb)
+        if (limit - p < nb) {
             throw new BufferUnderflowException();
+        }
         position = p + nb;
         return p;
     }
@@ -706,20 +677,22 @@ public abstract class Buffer {
      * BufferOverflowException} if it is not smaller than the limit, and then
      * increments the position.
      *
-     * @return  The current position value, before it is incremented
+     * @return The current position value, before it is incremented
      */
     final int nextPutIndex() {                          // package-private
         int p = position;
-        if (p >= limit)
+        if (p >= limit) {
             throw new BufferOverflowException();
+        }
         position = p + 1;
         return p;
     }
 
     final int nextPutIndex(int nb) {                    // package-private
         int p = position;
-        if (limit - p < nb)
+        if (limit - p < nb) {
             throw new BufferOverflowException();
+        }
         position = p + nb;
         return p;
     }
@@ -731,14 +704,16 @@ public abstract class Buffer {
      */
     @HotSpotIntrinsicCandidate
     final int checkIndex(int i) {                       // package-private
-        if ((i < 0) || (i >= limit))
+        if ((i < 0) || (i >= limit)) {
             throw new IndexOutOfBoundsException();
+        }
         return i;
     }
 
     final int checkIndex(int i, int nb) {               // package-private
-        if ((i < 0) || (nb > limit - i))
+        if ((i < 0) || (nb > limit - i)) {
             throw new IndexOutOfBoundsException();
+        }
         return i;
     }
 
@@ -760,37 +735,37 @@ public abstract class Buffer {
     static {
         // setup access to this package in SharedSecrets
         SharedSecrets.setJavaNioAccess(
-            new JavaNioAccess() {
-                @Override
-                public JavaNioAccess.BufferPool getDirectBufferPool() {
-                    return Bits.BUFFER_POOL;
-                }
+                new JavaNioAccess() {
+                    @Override
+                    public JavaNioAccess.BufferPool getDirectBufferPool() {
+                        return Bits.BUFFER_POOL;
+                    }
 
-                @Override
-                public ByteBuffer newDirectByteBuffer(long addr, int cap, Object obj, MemorySegmentProxy segment) {
-                    return new DirectByteBuffer(addr, cap, obj, segment);
-                }
+                    @Override
+                    public ByteBuffer newDirectByteBuffer(long addr, int cap, Object obj, MemorySegmentProxy segment) {
+                        return new DirectByteBuffer(addr, cap, obj, segment);
+                    }
 
-                @Override
-                public ByteBuffer newHeapByteBuffer(byte[] hb, int offset, int capacity, MemorySegmentProxy segment) {
-                    return new HeapByteBuffer(hb, offset, capacity, segment);
-                }
+                    @Override
+                    public ByteBuffer newHeapByteBuffer(byte[] hb, int offset, int capacity, MemorySegmentProxy segment) {
+                        return new HeapByteBuffer(hb, offset, capacity, segment);
+                    }
 
-                @Override
-                public Object getBufferBase(ByteBuffer bb) {
-                    return bb.base();
-                }
+                    @Override
+                    public Object getBufferBase(ByteBuffer bb) {
+                        return bb.base();
+                    }
 
-                @Override
-                public long getBufferAddress(ByteBuffer bb) {
-                    return bb.address;
-                }
+                    @Override
+                    public long getBufferAddress(ByteBuffer bb) {
+                        return bb.address;
+                    }
 
-                @Override
-                public void checkSegment(Buffer buffer) {
-                    buffer.checkSegment();
-                }
-            });
+                    @Override
+                    public void checkSegment(Buffer buffer) {
+                        buffer.checkSegment();
+                    }
+                });
     }
 
 }
