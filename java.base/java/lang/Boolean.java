@@ -39,12 +39,10 @@ import jdk.internal.HotSpotIntrinsicCandidate;
  * constants and methods useful when dealing with a
  * {@code boolean}.
  *
- * @author  Arthur van Hoff
- * @since   1.0
+ * @author Arthur van Hoff
+ * @since 1.0
  */
-public final class Boolean implements java.io.Serializable,
-                                      Comparable<Boolean>
-{
+public final class Boolean implements java.io.Serializable, Comparable<Boolean> {
     /**
      * The {@code Boolean} object corresponding to the primitive
      * value {@code true}.
@@ -60,7 +58,7 @@ public final class Boolean implements java.io.Serializable,
     /**
      * The Class object representing the primitive type boolean.
      *
-     * @since   1.1
+     * @since 1.1
      */
     @SuppressWarnings("unchecked")
     public static final Class<Boolean> TYPE = (Class<Boolean>) Class.getPrimitiveClass("boolean");
@@ -72,7 +70,9 @@ public final class Boolean implements java.io.Serializable,
      */
     private final boolean value;
 
-    /** use serialVersionUID from JDK 1.0.2 for interoperability */
+    /**
+     * use serialVersionUID from JDK 1.0.2 for interoperability
+     */
     @java.io.Serial
     private static final long serialVersionUID = -3665804199014368530L;
 
@@ -80,16 +80,14 @@ public final class Boolean implements java.io.Serializable,
      * Allocates a {@code Boolean} object representing the
      * {@code value} argument.
      *
-     * @param   value   the value of the {@code Boolean}.
-     *
-     * @deprecated
-     * It is rarely appropriate to use this constructor. The static factory
+     * @param value the value of the {@code Boolean}.
+     * @deprecated It is rarely appropriate to use this constructor. The static factory
      * {@link #valueOf(boolean)} is generally a better choice, as it is
      * likely to yield significantly better space and time performance.
      * Also consider using the final fields {@link #TRUE} and {@link #FALSE}
      * if possible.
      */
-    @Deprecated(since="9")
+    @Deprecated(since = "9")
     public Boolean(boolean value) {
         this.value = value;
     }
@@ -101,15 +99,13 @@ public final class Boolean implements java.io.Serializable,
      * Otherwise, allocates a {@code Boolean} object representing the
      * value {@code false}.
      *
-     * @param   s   the string to be converted to a {@code Boolean}.
-     *
-     * @deprecated
-     * It is rarely appropriate to use this constructor.
+     * @param s the string to be converted to a {@code Boolean}.
+     * @deprecated It is rarely appropriate to use this constructor.
      * Use {@link #parseBoolean(String)} to convert a string to a
      * {@code boolean} primitive, or use {@link #valueOf(String)}
      * to convert a string to a {@code Boolean} object.
      */
-    @Deprecated(since="9")
+    @Deprecated(since = "9")
     public Boolean(String s) {
         this(parseBoolean(s));
     }
@@ -124,9 +120,9 @@ public final class Boolean implements java.io.Serializable,
      * Example: {@code Boolean.parseBoolean("True")} returns {@code true}.<br>
      * Example: {@code Boolean.parseBoolean("yes")} returns {@code false}.
      *
-     * @param      s   the {@code String} containing the boolean
-     *                 representation to be parsed
-     * @return     the boolean represented by the string argument
+     * @param s the {@code String} containing the boolean
+     *          representation to be parsed
+     * @return the boolean represented by the string argument
      * @since 1.5
      */
     public static boolean parseBoolean(String s) {
@@ -137,7 +133,7 @@ public final class Boolean implements java.io.Serializable,
      * Returns the value of this {@code Boolean} object as a boolean
      * primitive.
      *
-     * @return  the primitive {@code boolean} value of this object.
+     * @return the primitive {@code boolean} value of this object.
      */
     @HotSpotIntrinsicCandidate
     public boolean booleanValue() {
@@ -154,9 +150,9 @@ public final class Boolean implements java.io.Serializable,
      * {@link #Boolean(boolean)}, as this method is likely to yield
      * significantly better space and time performance.
      *
-     * @param  b a boolean value.
+     * @param b a boolean value.
      * @return a {@code Boolean} instance representing {@code b}.
-     * @since  1.4
+     * @since 1.4
      */
     @HotSpotIntrinsicCandidate
     public static Boolean valueOf(boolean b) {
@@ -171,8 +167,8 @@ public final class Boolean implements java.io.Serializable,
      * Otherwise, a false value is returned, including for a null
      * argument.
      *
-     * @param   s   a string.
-     * @return  the {@code Boolean} value represented by the string.
+     * @param s a string.
+     * @return the {@code Boolean} value represented by the string.
      */
     public static Boolean valueOf(String s) {
         return parseBoolean(s) ? TRUE : FALSE;
@@ -198,8 +194,9 @@ public final class Boolean implements java.io.Serializable,
      * a string equal to {@code "true"} is returned. Otherwise, a
      * string equal to {@code "false"} is returned.
      *
-     * @return  a string representation of this object.
+     * @return a string representation of this object.
      */
+    @Override
     public String toString() {
         return value ? "true" : "false";
     }
@@ -207,7 +204,7 @@ public final class Boolean implements java.io.Serializable,
     /**
      * Returns a hash code for this {@code Boolean} object.
      *
-     * @return  the integer {@code 1231} if this object represents
+     * @return the integer {@code 1231} if this object represents
      * {@code true}; returns the integer {@code 1237} if this
      * object represents {@code false}.
      */
@@ -228,18 +225,19 @@ public final class Boolean implements java.io.Serializable,
         return value ? 1231 : 1237;
     }
 
-   /**
+    /**
      * Returns {@code true} if and only if the argument is not
      * {@code null} and is a {@code Boolean} object that
      * represents the same {@code boolean} value as this object.
      *
-     * @param   obj   the object to compare with.
-     * @return  {@code true} if the Boolean objects represent the
-     *          same value; {@code false} otherwise.
+     * @param obj the object to compare with.
+     * @return {@code true} if the Boolean objects represent the
+     * same value; {@code false} otherwise.
      */
+    @Override
     public boolean equals(Object obj) {
         if (obj instanceof Boolean) {
-            return value == ((Boolean)obj).booleanValue();
+            return value == ((Boolean) obj).booleanValue();
         }
         return false;
     }
@@ -253,12 +251,12 @@ public final class Boolean implements java.io.Serializable,
      * property with the specified name, or if the specified name is
      * empty or null, then {@code false} is returned.
      *
-     * @param   name   the system property name.
-     * @return  the {@code boolean} value of the system property.
-     * @throws  SecurityException for the same reasons as
-     *          {@link System#getProperty(String) System.getProperty}
-     * @see     java.lang.System#getProperty(java.lang.String)
-     * @see     java.lang.System#getProperty(java.lang.String, java.lang.String)
+     * @param name the system property name.
+     * @return the {@code boolean} value of the system property.
+     * @throws SecurityException for the same reasons as
+     *                           {@link System#getProperty(String) System.getProperty}
+     * @see java.lang.System#getProperty(java.lang.String)
+     * @see java.lang.System#getProperty(java.lang.String, java.lang.String)
      */
     public static boolean getBoolean(String name) {
         boolean result = false;
@@ -272,15 +270,16 @@ public final class Boolean implements java.io.Serializable,
     /**
      * Compares this {@code Boolean} instance with another.
      *
-     * @param   b the {@code Boolean} instance to be compared
-     * @return  zero if this object represents the same boolean value as the
-     *          argument; a positive value if this object represents true
-     *          and the argument represents false; and a negative value if
-     *          this object represents false and the argument represents true
-     * @throws  NullPointerException if the argument is {@code null}
-     * @see     Comparable
-     * @since  1.5
+     * @param b the {@code Boolean} instance to be compared
+     * @return zero if this object represents the same boolean value as the
+     * argument; a positive value if this object represents true
+     * and the argument represents false; and a negative value if
+     * this object represents false and the argument represents true
+     * @throws NullPointerException if the argument is {@code null}
+     * @see Comparable
+     * @since 1.5
      */
+    @Override
     public int compareTo(Boolean b) {
         return compare(this.value, b.value);
     }
@@ -292,11 +291,11 @@ public final class Boolean implements java.io.Serializable,
      *    Boolean.valueOf(x).compareTo(Boolean.valueOf(y))
      * </pre>
      *
-     * @param  x the first {@code boolean} to compare
-     * @param  y the second {@code boolean} to compare
+     * @param x the first {@code boolean} to compare
+     * @param y the second {@code boolean} to compare
      * @return the value {@code 0} if {@code x == y};
-     *         a value less than {@code 0} if {@code !x && y}; and
-     *         a value greater than {@code 0} if {@code x && !y}
+     * a value less than {@code 0} if {@code !x && y}; and
+     * a value greater than {@code 0} if {@code x && !y}
      * @since 1.7
      */
     public static int compare(boolean x, boolean y) {
@@ -337,7 +336,7 @@ public final class Boolean implements java.io.Serializable,
      *
      * @param a the first operand
      * @param b the second operand
-     * @return  the logical XOR of {@code a} and {@code b}
+     * @return the logical XOR of {@code a} and {@code b}
      * @see java.util.function.BinaryOperator
      * @since 1.8
      */

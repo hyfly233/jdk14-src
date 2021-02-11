@@ -24,16 +24,26 @@
  */
 package java.lang;
 
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
-import java.io.Console;
-import java.io.FileDescriptor;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.PrintStream;
-import java.io.UnsupportedEncodingException;
+import jdk.internal.HotSpotIntrinsicCandidate;
+import jdk.internal.access.JavaLangAccess;
+import jdk.internal.access.SharedSecrets;
+import jdk.internal.logger.LazyLoggers;
+import jdk.internal.logger.LocalizedLoggerWrapper;
+import jdk.internal.logger.LoggerFinderLoader;
+import jdk.internal.misc.VM;
+import jdk.internal.module.ModuleBootstrap;
+import jdk.internal.module.ServicesCatalog;
+import jdk.internal.reflect.CallerSensitive;
+import jdk.internal.reflect.Reflection;
+import jdk.internal.util.StaticProperty;
+import jdk.internal.util.SystemProps;
+import jdk.internal.vm.annotation.Stable;
+import sun.nio.ch.Interruptible;
+import sun.nio.fs.DefaultFileSystemProvider;
+import sun.reflect.annotation.AnnotationType;
+import sun.security.util.SecurityConstants;
+
+import java.io.*;
 import java.lang.annotation.Annotation;
 import java.lang.module.ModuleDescriptor;
 import java.lang.reflect.Constructor;
@@ -41,55 +51,30 @@ import java.lang.reflect.Executable;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.net.URI;
-import java.nio.charset.CharacterCodingException;
-import java.security.AccessControlContext;
-import java.security.ProtectionDomain;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.nio.channels.Channel;
 import java.nio.channels.spi.SelectorProvider;
+import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Properties;
-import java.util.PropertyPermission;
-import java.util.ResourceBundle;
-import java.util.function.Supplier;
+import java.security.AccessControlContext;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
+import java.security.ProtectionDomain;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Supplier;
 import java.util.stream.Stream;
-
-import jdk.internal.util.StaticProperty;
-import jdk.internal.module.ModuleBootstrap;
-import jdk.internal.module.ServicesCatalog;
-import jdk.internal.reflect.CallerSensitive;
-import jdk.internal.reflect.Reflection;
-import jdk.internal.HotSpotIntrinsicCandidate;
-import jdk.internal.access.JavaLangAccess;
-import jdk.internal.access.SharedSecrets;
-import jdk.internal.misc.VM;
-import jdk.internal.logger.LoggerFinderLoader;
-import jdk.internal.logger.LazyLoggers;
-import jdk.internal.logger.LocalizedLoggerWrapper;
-import jdk.internal.util.SystemProps;
-import jdk.internal.vm.annotation.Stable;
-import sun.nio.fs.DefaultFileSystemProvider;
-import sun.reflect.annotation.AnnotationType;
-import sun.nio.ch.Interruptible;
-import sun.security.util.SecurityConstants;
 
 /**
  * The {@code System} class contains several useful class fields
  * and methods. It cannot be instantiated.
- *
+ * <p>
  * Among the facilities provided by the {@code System} class
  * are standard input, standard output, and error output streams;
  * access to externally defined properties and environment
  * variables; a means of loading files and libraries; and a utility
  * method for quickly copying a portion of an array.
  *
- * @since   1.0
+ * @since 1.0
  */
 public final class System {
     /* Register the natives via the static initializer.
@@ -98,11 +83,14 @@ public final class System {
      * of this class separate from <clinit>.
      */
     private static native void registerNatives();
+
     static {
         registerNatives();
     }
 
-    /** Don't let anyone instantiate this class */
+    /**
+     * Don't let anyone instantiate this class
+     */
     private System() {
     }
 
@@ -128,16 +116,16 @@ public final class System {
      * <p>
      * See the {@code println} methods in class {@code PrintStream}.
      *
-     * @see     java.io.PrintStream#println()
-     * @see     java.io.PrintStream#println(boolean)
-     * @see     java.io.PrintStream#println(char)
-     * @see     java.io.PrintStream#println(char[])
-     * @see     java.io.PrintStream#println(double)
-     * @see     java.io.PrintStream#println(float)
-     * @see     java.io.PrintStream#println(int)
-     * @see     java.io.PrintStream#println(long)
-     * @see     java.io.PrintStream#println(java.lang.Object)
-     * @see     java.io.PrintStream#println(java.lang.String)
+     * @see java.io.PrintStream#println()
+     * @see java.io.PrintStream#println(boolean)
+     * @see java.io.PrintStream#println(char)
+     * @see java.io.PrintStream#println(char[])
+     * @see java.io.PrintStream#println(double)
+     * @see java.io.PrintStream#println(float)
+     * @see java.io.PrintStream#println(int)
+     * @see java.io.PrintStream#println(long)
+     * @see java.io.PrintStream#println(java.lang.Object)
+     * @see java.io.PrintStream#println(java.lang.String)
      */
     public static final PrintStream out = null;
 
@@ -158,7 +146,8 @@ public final class System {
     // indicates if a security manager is possible
     private static final int NEVER = 1;
     private static final int MAYBE = 2;
-    private static @Stable int allowSecurityManager;
+    private static @Stable
+    int allowSecurityManager;
 
     // current security manager
     private static volatile SecurityManager security;   // read by VM
@@ -170,22 +159,18 @@ public final class System {
 
     /**
      * Reassigns the "standard" input stream.
-     *
+     * <p>
      * First, if there is a security manager, its {@code checkPermission}
      * method is called with a {@code RuntimePermission("setIO")} permission
-     *  to see if it's ok to reassign the "standard" input stream.
+     * to see if it's ok to reassign the "standard" input stream.
      *
      * @param in the new standard input stream.
-     *
-     * @throws SecurityException
-     *        if a security manager exists and its
-     *        {@code checkPermission} method doesn't allow
-     *        reassigning of the standard input stream.
-     *
+     * @throws SecurityException if a security manager exists and its
+     *                           {@code checkPermission} method doesn't allow
+     *                           reassigning of the standard input stream.
      * @see SecurityManager#checkPermission
      * @see java.lang.RuntimePermission
-     *
-     * @since   1.1
+     * @since 1.1
      */
     public static void setIn(InputStream in) {
         checkIO();
@@ -194,22 +179,18 @@ public final class System {
 
     /**
      * Reassigns the "standard" output stream.
-     *
+     * <p>
      * First, if there is a security manager, its {@code checkPermission}
      * method is called with a {@code RuntimePermission("setIO")} permission
-     *  to see if it's ok to reassign the "standard" output stream.
+     * to see if it's ok to reassign the "standard" output stream.
      *
      * @param out the new standard output stream
-     *
-     * @throws SecurityException
-     *        if a security manager exists and its
-     *        {@code checkPermission} method doesn't allow
-     *        reassigning of the standard output stream.
-     *
+     * @throws SecurityException if a security manager exists and its
+     *                           {@code checkPermission} method doesn't allow
+     *                           reassigning of the standard output stream.
      * @see SecurityManager#checkPermission
      * @see java.lang.RuntimePermission
-     *
-     * @since   1.1
+     * @since 1.1
      */
     public static void setOut(PrintStream out) {
         checkIO();
@@ -218,22 +199,18 @@ public final class System {
 
     /**
      * Reassigns the "standard" error output stream.
-     *
+     * <p>
      * First, if there is a security manager, its {@code checkPermission}
      * method is called with a {@code RuntimePermission("setIO")} permission
-     *  to see if it's ok to reassign the "standard" error output stream.
+     * to see if it's ok to reassign the "standard" error output stream.
      *
      * @param err the new standard error output stream.
-     *
-     * @throws SecurityException
-     *        if a security manager exists and its
-     *        {@code checkPermission} method doesn't allow
-     *        reassigning of the standard error output stream.
-     *
+     * @throws SecurityException if a security manager exists and its
+     *                           {@code checkPermission} method doesn't allow
+     *                           reassigning of the standard error output stream.
      * @see SecurityManager#checkPermission
      * @see java.lang.RuntimePermission
-     *
-     * @since   1.1
+     * @since 1.1
      */
     public static void setErr(PrintStream err) {
         checkIO();
@@ -246,26 +223,25 @@ public final class System {
      * Returns the unique {@link java.io.Console Console} object associated
      * with the current Java virtual machine, if any.
      *
-     * @return  The system console, if any, otherwise {@code null}.
-     *
-     * @since   1.6
+     * @return The system console, if any, otherwise {@code null}.
+     * @since 1.6
      */
-     public static Console console() {
-         Console c;
-         if ((c = cons) == null) {
-             synchronized (System.class) {
-                 if ((c = cons) == null) {
-                     cons = c = SharedSecrets.getJavaIOAccess().console();
-                 }
-             }
-         }
-         return c;
-     }
+    public static Console console() {
+        Console c;
+        if ((c = cons) == null) {
+            synchronized (System.class) {
+                if ((c = cons) == null) {
+                    cons = c = SharedSecrets.getJavaIOAccess().console();
+                }
+            }
+        }
+        return c;
+    }
 
     /**
      * Returns the channel inherited from the entity that created this
      * Java virtual machine.
-     *
+     * <p>
      * This method returns the channel obtained by invoking the
      * {@link java.nio.channels.spi.SelectorProvider#inheritedChannel
      * inheritedChannel} method of the system-wide default
@@ -276,15 +252,10 @@ public final class System {
      * inheritedChannel}, this method may return other kinds of
      * channels in the future.
      *
-     * @return  The inherited channel, if any, otherwise {@code null}.
-     *
-     * @throws  IOException
-     *          If an I/O error occurs
-     *
-     * @throws  SecurityException
-     *          If a security manager is present and it does not
-     *          permit access to the channel.
-     *
+     * @return The inherited channel, if any, otherwise {@code null}.
+     * @throws IOException       If an I/O error occurs
+     * @throws SecurityException If a security manager is present and it does not
+     *                           permit access to the channel.
      * @since 1.5
      */
     public static Channel inheritedChannel() throws IOException {
@@ -299,12 +270,14 @@ public final class System {
     }
 
     private static native void setIn0(InputStream in);
+
     private static native void setOut0(PrintStream out);
+
     private static native void setErr0(PrintStream err);
 
     /**
      * Sets the system-wide security manager.
-     *
+     * <p>
      * If there is a security manager already installed, this method first
      * calls the security manager's {@code checkPermission} method
      * with a {@code RuntimePermission("setSecurityManager")}
@@ -317,18 +290,15 @@ public final class System {
      * security manager has been established, then no action is taken and
      * the method simply returns.
      *
+     * @param sm the security manager or {@code null}
+     * @throws SecurityException             if the security manager has already been set and its {@code
+     *                                       checkPermission} method doesn't allow it to be replaced
+     * @throws UnsupportedOperationException if {@code sm} is non-null and a security manager is not allowed
+     *                                       to be set dynamically
      * @implNote In the JDK implementation, if the Java virtual machine is
      * started with the system property {@code java.security.manager} set to
      * the special token "{@code disallow}" then the {@code setSecurityManager}
      * method cannot be used to set a security manager.
-     *
-     * @param  sm the security manager or {@code null}
-     * @throws SecurityException
-     *         if the security manager has already been set and its {@code
-     *         checkPermission} method doesn't allow it to be replaced
-     * @throws UnsupportedOperationException
-     *         if {@code sm} is non-null and a security manager is not allowed
-     *         to be set dynamically
      * @see #getSecurityManager
      * @see SecurityManager#checkPermission
      * @see java.lang.RuntimePermission
@@ -356,13 +326,12 @@ public final class System {
             // security manager not allowed
             if (sm != null) {
                 throw new UnsupportedOperationException(
-                    "Runtime configured to disallow security manager");
+                        "Runtime configured to disallow security manager");
             }
         }
     }
 
-    private static synchronized
-    void setSecurityManager0(final SecurityManager s) {
+    private static synchronized void setSecurityManager0(final SecurityManager s) {
         SecurityManager sm = getSecurityManager();
         if (sm != null) {
             // ask the currently installed security manager if we
@@ -380,9 +349,10 @@ public final class System {
             // which will loop infinitely if there is a non-system class
             // (in this case: the new security manager class) on the stack).
             AccessController.doPrivileged(new PrivilegedAction<>() {
+                @Override
                 public Object run() {
                     s.getClass().getProtectionDomain().implies
-                        (SecurityConstants.ALL_PERMISSION);
+                            (SecurityConstants.ALL_PERMISSION);
                     return null;
                 }
             });
@@ -394,10 +364,10 @@ public final class System {
     /**
      * Gets the system-wide security manager.
      *
-     * @return  if a security manager has already been established for the
-     *          current application, then that security manager is returned;
-     *          otherwise, {@code null} is returned.
-     * @see     #setSecurityManager
+     * @return if a security manager has already been established for the
+     * current application, then that security manager is returned;
+     * otherwise, {@code null} is returned.
+     * @see #setSecurityManager
      */
     public static SecurityManager getSecurityManager() {
         if (allowSecurityManager()) {
@@ -419,9 +389,9 @@ public final class System {
      * a discussion of slight discrepancies that may arise between
      * "computer time" and coordinated universal time (UTC).
      *
-     * @return  the difference, measured in milliseconds, between
-     *          the current time and midnight, January 1, 1970 UTC.
-     * @see     java.util.Date
+     * @return the difference, measured in milliseconds, between
+     * the current time and midnight, January 1, 1970 UTC.
+     * @see java.util.Date
      */
     @HotSpotIntrinsicCandidate
     public static native long currentTimeMillis();
@@ -429,7 +399,7 @@ public final class System {
     /**
      * Returns the current value of the running Java Virtual Machine's
      * high-resolution time source, in nanoseconds.
-     *
+     * <p>
      * This method can only be used to measure elapsed time and is
      * not related to any other notion of system or wall-clock time.
      * The value returned represents nanoseconds since some fixed but
@@ -464,7 +434,7 @@ public final class System {
      * because of the possibility of numerical overflow.
      *
      * @return the current value of the running Java Virtual Machine's
-     *         high-resolution time source, in nanoseconds
+     * high-resolution time source, in nanoseconds
      * @since 1.5
      */
     @HotSpotIntrinsicCandidate
@@ -549,21 +519,21 @@ public final class System {
      * paragraph effectively applies only to the situation where both
      * arrays have component types that are reference types.)
      *
-     * @param      src      the source array.
-     * @param      srcPos   starting position in the source array.
-     * @param      dest     the destination array.
-     * @param      destPos  starting position in the destination data.
-     * @param      length   the number of array elements to be copied.
-     * @throws     IndexOutOfBoundsException  if copying would cause
-     *             access of data outside array bounds.
-     * @throws     ArrayStoreException  if an element in the {@code src}
-     *             array could not be stored into the {@code dest} array
-     *             because of a type mismatch.
-     * @throws     NullPointerException if either {@code src} or
-     *             {@code dest} is {@code null}.
+     * @param src     the source array.
+     * @param srcPos  starting position in the source array.
+     * @param dest    the destination array.
+     * @param destPos starting position in the destination data.
+     * @param length  the number of array elements to be copied.
+     * @throws IndexOutOfBoundsException if copying would cause
+     *                                   access of data outside array bounds.
+     * @throws ArrayStoreException       if an element in the {@code src}
+     *                                   array could not be stored into the {@code dest} array
+     *                                   because of a type mismatch.
+     * @throws NullPointerException      if either {@code src} or
+     *                                   {@code dest} is {@code null}.
      */
     @HotSpotIntrinsicCandidate
-    public static native void arraycopy(Object src,  int  srcPos,
+    public static native void arraycopy(Object src, int srcPos,
                                         Object dest, int destPos,
                                         int length);
 
@@ -575,10 +545,10 @@ public final class System {
      * The hash code for the null reference is zero.
      *
      * @param x object for which the hashCode is to be calculated
-     * @return  the hashCode
-     * @since   1.1
+     * @return the hashCode
      * @see Object#hashCode
      * @see java.util.Objects#hashCode(Object)
+     * @since 1.1
      */
     @HotSpotIntrinsicCandidate
     public static native int identityHashCode(Object x);
@@ -610,7 +580,7 @@ public final class System {
 
     /**
      * Determines the current system properties.
-     *
+     * <p>
      * First, if there is a security manager, its
      * {@code checkPropertiesAccess} method is called with no
      * arguments. This may result in a security exception.
@@ -706,16 +676,17 @@ public final class System {
      * {@code getProperties} operation, it may choose to permit the
      * {@link #getProperty(String)} operation.
      *
-     * @apiNote
-     * <strong>Changing a standard system property may have unpredictable results
+     * @return the system properties
+     * @throws SecurityException if a security manager exists and its
+     *                           {@code checkPropertiesAccess} method doesn't allow access
+     *                           to the system properties.
+     * @apiNote <strong>Changing a standard system property may have unpredictable results
      * unless otherwise specified.</strong>
      * Property values may be cached during initialization or on first use.
      * Setting a standard property after initialization using {@link #getProperties()},
      * {@link #setProperties(Properties)}, {@link #setProperty(String, String)}, or
      * {@link #clearProperty(String)} may not have the desired effect.
-     *
-     * @implNote
-     * In addition to the standard system properties, the system
+     * @implNote In addition to the standard system properties, the system
      * properties may include the following keys:
      * <table class="striped">
      * <caption style="display:none">Shows property keys and associated values</caption>
@@ -734,15 +705,10 @@ public final class System {
      *     <td>The main class name of the initial module</td></tr>
      * </tbody>
      * </table>
-     *
-     * @return     the system properties
-     * @throws     SecurityException  if a security manager exists and its
-     *             {@code checkPropertiesAccess} method doesn't allow access
-     *             to the system properties.
-     * @see        #setProperties
-     * @see        java.lang.SecurityException
-     * @see        java.lang.SecurityManager#checkPropertiesAccess()
-     * @see        java.util.Properties
+     * @see #setProperties
+     * @see java.lang.SecurityException
+     * @see java.lang.SecurityManager#checkPropertiesAccess()
+     * @see java.util.Properties
      */
     public static Properties getProperties() {
         SecurityManager sm = getSecurityManager();
@@ -772,7 +738,7 @@ public final class System {
 
     /**
      * Sets the system properties to the {@code Properties} argument.
-     *
+     * <p>
      * First, if there is a security manager, its
      * {@code checkPropertiesAccess} method is called with no
      * arguments. This may result in a security exception.
@@ -782,19 +748,17 @@ public final class System {
      * {@code null}, then the current set of system properties is
      * forgotten.
      *
-     * @apiNote
-     * <strong>Changing a standard system property may have unpredictable results
+     * @param props the new system properties.
+     * @throws SecurityException if a security manager exists and its
+     *                           {@code checkPropertiesAccess} method doesn't allow access
+     *                           to the system properties.
+     * @apiNote <strong>Changing a standard system property may have unpredictable results
      * unless otherwise specified</strong>.
      * See {@linkplain #getProperties getProperties} for details.
-     *
-     * @param      props   the new system properties.
-     * @throws     SecurityException  if a security manager exists and its
-     *             {@code checkPropertiesAccess} method doesn't allow access
-     *             to the system properties.
-     * @see        #getProperties
-     * @see        java.util.Properties
-     * @see        java.lang.SecurityException
-     * @see        java.lang.SecurityManager#checkPropertiesAccess()
+     * @see #getProperties
+     * @see java.util.Properties
+     * @see java.lang.SecurityException
+     * @see java.lang.SecurityManager#checkPropertiesAccess()
      */
     public static void setProperties(Properties props) {
         SecurityManager sm = getSecurityManager();
@@ -812,7 +776,7 @@ public final class System {
 
     /**
      * Gets the system property indicated by the specified key.
-     *
+     * <p>
      * First, if there is a security manager, its
      * {@code checkPropertyAccess} method is called with the key as
      * its argument. This may result in a SecurityException.
@@ -821,24 +785,21 @@ public final class System {
      * properties is first created and initialized in the same manner as
      * for the {@code getProperties} method.
      *
-     * @apiNote
-     * <strong>Changing a standard system property may have unpredictable results
+     * @param key the name of the system property.
+     * @return the string value of the system property,
+     * or {@code null} if there is no property with that key.
+     * @throws SecurityException        if a security manager exists and its
+     *                                  {@code checkPropertyAccess} method doesn't allow
+     *                                  access to the specified system property.
+     * @throws NullPointerException     if {@code key} is {@code null}.
+     * @throws IllegalArgumentException if {@code key} is empty.
+     * @apiNote <strong>Changing a standard system property may have unpredictable results
      * unless otherwise specified</strong>.
      * See {@linkplain #getProperties getProperties} for details.
-     *
-     * @param      key   the name of the system property.
-     * @return     the string value of the system property,
-     *             or {@code null} if there is no property with that key.
-     *
-     * @throws     SecurityException  if a security manager exists and its
-     *             {@code checkPropertyAccess} method doesn't allow
-     *             access to the specified system property.
-     * @throws     NullPointerException if {@code key} is {@code null}.
-     * @throws     IllegalArgumentException if {@code key} is empty.
-     * @see        #setProperty
-     * @see        java.lang.SecurityException
-     * @see        java.lang.SecurityManager#checkPropertyAccess(java.lang.String)
-     * @see        java.lang.System#getProperties()
+     * @see #setProperty
+     * @see java.lang.SecurityException
+     * @see java.lang.SecurityManager#checkPropertyAccess(java.lang.String)
+     * @see java.lang.System#getProperties()
      */
     public static String getProperty(String key) {
         checkKey(key);
@@ -852,7 +813,7 @@ public final class System {
 
     /**
      * Gets the system property indicated by the specified key.
-     *
+     * <p>
      * First, if there is a security manager, its
      * {@code checkPropertyAccess} method is called with the
      * {@code key} as its argument.
@@ -861,19 +822,18 @@ public final class System {
      * properties is first created and initialized in the same manner as
      * for the {@code getProperties} method.
      *
-     * @param      key   the name of the system property.
-     * @param      def   a default value.
-     * @return     the string value of the system property,
-     *             or the default value if there is no property with that key.
-     *
-     * @throws     SecurityException  if a security manager exists and its
-     *             {@code checkPropertyAccess} method doesn't allow
-     *             access to the specified system property.
-     * @throws     NullPointerException if {@code key} is {@code null}.
-     * @throws     IllegalArgumentException if {@code key} is empty.
-     * @see        #setProperty
-     * @see        java.lang.SecurityManager#checkPropertyAccess(java.lang.String)
-     * @see        java.lang.System#getProperties()
+     * @param key the name of the system property.
+     * @param def a default value.
+     * @return the string value of the system property,
+     * or the default value if there is no property with that key.
+     * @throws SecurityException        if a security manager exists and its
+     *                                  {@code checkPropertyAccess} method doesn't allow
+     *                                  access to the specified system property.
+     * @throws NullPointerException     if {@code key} is {@code null}.
+     * @throws IllegalArgumentException if {@code key} is empty.
+     * @see #setProperty
+     * @see java.lang.SecurityManager#checkPropertyAccess(java.lang.String)
+     * @see java.lang.System#getProperties()
      */
     public static String getProperty(String key, String def) {
         checkKey(key);
@@ -887,7 +847,7 @@ public final class System {
 
     /**
      * Sets the system property indicated by the specified key.
-     *
+     * <p>
      * First, if a security manager exists, its
      * {@code SecurityManager.checkPermission} method
      * is called with a {@code PropertyPermission(key, "write")}
@@ -895,35 +855,32 @@ public final class System {
      * If no exception is thrown, the specified property is set to the given
      * value.
      *
-     * @apiNote
-     * <strong>Changing a standard system property may have unpredictable results
+     * @param key   the name of the system property.
+     * @param value the value of the system property.
+     * @return the previous value of the system property,
+     * or {@code null} if it did not have one.
+     * @throws SecurityException        if a security manager exists and its
+     *                                  {@code checkPermission} method doesn't allow
+     *                                  setting of the specified property.
+     * @throws NullPointerException     if {@code key} or
+     *                                  {@code value} is {@code null}.
+     * @throws IllegalArgumentException if {@code key} is empty.
+     * @apiNote <strong>Changing a standard system property may have unpredictable results
      * unless otherwise specified</strong>.
      * See {@linkplain #getProperties getProperties} for details.
-     *
-     * @param      key   the name of the system property.
-     * @param      value the value of the system property.
-     * @return     the previous value of the system property,
-     *             or {@code null} if it did not have one.
-     *
-     * @throws     SecurityException  if a security manager exists and its
-     *             {@code checkPermission} method doesn't allow
-     *             setting of the specified property.
-     * @throws     NullPointerException if {@code key} or
-     *             {@code value} is {@code null}.
-     * @throws     IllegalArgumentException if {@code key} is empty.
-     * @see        #getProperty
-     * @see        java.lang.System#getProperty(java.lang.String)
-     * @see        java.lang.System#getProperty(java.lang.String, java.lang.String)
-     * @see        java.util.PropertyPermission
-     * @see        SecurityManager#checkPermission
-     * @since      1.2
+     * @see #getProperty
+     * @see java.lang.System#getProperty(java.lang.String)
+     * @see java.lang.System#getProperty(java.lang.String, java.lang.String)
+     * @see java.util.PropertyPermission
+     * @see SecurityManager#checkPermission
+     * @since 1.2
      */
     public static String setProperty(String key, String value) {
         checkKey(key);
         SecurityManager sm = getSecurityManager();
         if (sm != null) {
             sm.checkPermission(new PropertyPermission(key,
-                SecurityConstants.PROPERTY_WRITE_ACTION));
+                    SecurityConstants.PROPERTY_WRITE_ACTION));
         }
 
         return (String) props.setProperty(key, value);
@@ -931,32 +888,29 @@ public final class System {
 
     /**
      * Removes the system property indicated by the specified key.
-     *
+     * <p>
      * First, if a security manager exists, its
      * {@code SecurityManager.checkPermission} method
      * is called with a {@code PropertyPermission(key, "write")}
      * permission. This may result in a SecurityException being thrown.
      * If no exception is thrown, the specified property is removed.
      *
-     * @apiNote
-     * <strong>Changing a standard system property may have unpredictable results
+     * @param key the name of the system property to be removed.
+     * @return the previous string value of the system property,
+     * or {@code null} if there was no property with that key.
+     * @throws SecurityException        if a security manager exists and its
+     *                                  {@code checkPropertyAccess} method doesn't allow
+     *                                  access to the specified system property.
+     * @throws NullPointerException     if {@code key} is {@code null}.
+     * @throws IllegalArgumentException if {@code key} is empty.
+     * @apiNote <strong>Changing a standard system property may have unpredictable results
      * unless otherwise specified</strong>.
      * See {@linkplain #getProperties getProperties} method for details.
-     *
-     * @param      key   the name of the system property to be removed.
-     * @return     the previous string value of the system property,
-     *             or {@code null} if there was no property with that key.
-     *
-     * @throws     SecurityException  if a security manager exists and its
-     *             {@code checkPropertyAccess} method doesn't allow
-     *              access to the specified system property.
-     * @throws     NullPointerException if {@code key} is {@code null}.
-     * @throws     IllegalArgumentException if {@code key} is empty.
-     * @see        #getProperty
-     * @see        #setProperty
-     * @see        java.util.Properties
-     * @see        java.lang.SecurityException
-     * @see        java.lang.SecurityManager#checkPropertiesAccess()
+     * @see #getProperty
+     * @see #setProperty
+     * @see java.util.Properties
+     * @see java.lang.SecurityException
+     * @see java.lang.SecurityManager#checkPropertiesAccess()
      * @since 1.5
      */
     public static String clearProperty(String key) {
@@ -1012,22 +966,21 @@ public final class System {
      * {@code System.getenv("FOO").equals(System.getenv("foo"))}
      * is likely to be true on Microsoft Windows.
      *
-     * @param  name the name of the environment variable
+     * @param name the name of the environment variable
      * @return the string value of the variable, or {@code null}
-     *         if the variable is not defined in the system environment
+     * if the variable is not defined in the system environment
      * @throws NullPointerException if {@code name} is {@code null}
-     * @throws SecurityException
-     *         if a security manager exists and its
-     *         {@link SecurityManager#checkPermission checkPermission}
-     *         method doesn't allow access to the environment variable
-     *         {@code name}
-     * @see    #getenv()
-     * @see    ProcessBuilder#environment()
+     * @throws SecurityException    if a security manager exists and its
+     *                              {@link SecurityManager#checkPermission checkPermission}
+     *                              method doesn't allow access to the environment variable
+     *                              {@code name}
+     * @see #getenv()
+     * @see ProcessBuilder#environment()
      */
     public static String getenv(String name) {
         SecurityManager sm = getSecurityManager();
         if (sm != null) {
-            sm.checkPermission(new RuntimePermission("getenv."+name));
+            sm.checkPermission(new RuntimePermission("getenv." + name));
         }
 
         return ProcessEnvironment.getenv(name);
@@ -1065,15 +1018,14 @@ public final class System {
      * are generally preferred over environment variables.
      *
      * @return the environment as a map of variable names to values
-     * @throws SecurityException
-     *         if a security manager exists and its
-     *         {@link SecurityManager#checkPermission checkPermission}
-     *         method doesn't allow access to the process environment
-     * @see    #getenv(String)
-     * @see    ProcessBuilder#environment()
-     * @since  1.5
+     * @throws SecurityException if a security manager exists and its
+     *                           {@link SecurityManager#checkPermission checkPermission}
+     *                           method doesn't allow access to the process environment
+     * @see #getenv(String)
+     * @see ProcessBuilder#environment()
+     * @since 1.5
      */
-    public static java.util.Map<String,String> getenv() {
+    public static java.util.Map<String, String> getenv() {
         SecurityManager sm = getSecurityManager();
         if (sm != null) {
             sm.checkPermission(new RuntimePermission("getenv.*"));
@@ -1086,7 +1038,7 @@ public final class System {
      * {@code System.Logger} instances log messages that will be
      * routed to the underlying logging framework the {@link System.LoggerFinder
      * LoggerFinder} uses.
-     *
+     * <p>
      * {@code System.Logger} instances are typically obtained from
      * the {@link java.lang.System System} class, by calling
      * {@link java.lang.System#getLogger(java.lang.String) System.getLogger(loggerName)}
@@ -1096,14 +1048,13 @@ public final class System {
      * @see java.lang.System#getLogger(java.lang.String)
      * @see java.lang.System#getLogger(java.lang.String, java.util.ResourceBundle)
      * @see java.lang.System.LoggerFinder
-     *
      * @since 9
      */
     public interface Logger {
 
         /**
          * System {@linkplain Logger loggers} levels.
-         *
+         * <p>
          * A level has a {@linkplain #getName() name} and {@linkplain
          * #getSeverity() severity}.
          * Level values are {@link #ALL}, {@link #TRACE}, {@link #DEBUG},
@@ -1146,10 +1097,9 @@ public final class System {
          * </tbody>
          * </table>
          *
-         * @since 9
-         *
          * @see java.lang.System.LoggerFinder
          * @see java.lang.System.Logger
+         * @since 9
          */
         public enum Level {
 
@@ -1207,6 +1157,7 @@ public final class System {
 
             /**
              * Returns the name of this level.
+             *
              * @return this level {@linkplain #name()}.
              */
             public final String getName() {
@@ -1216,6 +1167,7 @@ public final class System {
             /**
              * Returns the severity of this level.
              * A higher severity means a more severe condition.
+             *
              * @return this level severity.
              */
             public final int getSeverity() {
@@ -1236,8 +1188,7 @@ public final class System {
          *
          * @param level the log message level.
          * @return {@code true} if the given log message level is currently
-         *         being logged.
-         *
+         * being logged.
          * @throws NullPointerException if {@code level} is {@code null}.
          */
         public boolean isLoggable(Level level);
@@ -1245,17 +1196,15 @@ public final class System {
         /**
          * Logs a message.
          *
+         * @param level the log message level.
+         * @param msg   the string message (or a key in the message catalog, if
+         *              this logger is a {@link
+         *              LoggerFinder#getLocalizedLogger(java.lang.String,
+         *              java.util.ResourceBundle, java.lang.Module) localized logger});
+         *              can be {@code null}.
+         * @throws NullPointerException if {@code level} is {@code null}.
          * @implSpec The default implementation for this method calls
          * {@code this.log(level, (ResourceBundle)null, msg, (Object[])null);}
-         *
-         * @param level the log message level.
-         * @param msg the string message (or a key in the message catalog, if
-         * this logger is a {@link
-         * LoggerFinder#getLocalizedLogger(java.lang.String,
-         * java.util.ResourceBundle, java.lang.Module) localized logger});
-         * can be {@code null}.
-         *
-         * @throws NullPointerException if {@code level} is {@code null}.
          */
         public default void log(Level level, String msg) {
             log(level, (ResourceBundle) null, msg, (Object[]) null);
@@ -1263,20 +1212,18 @@ public final class System {
 
         /**
          * Logs a lazily supplied message.
-         *
+         * <p>
          * If the logger is currently enabled for the given log message level
          * then a message is logged that is the result produced by the
          * given supplier function.  Otherwise, the supplier is not operated on.
          *
+         * @param level       the log message level.
+         * @param msgSupplier a supplier function that produces a message.
+         * @throws NullPointerException if {@code level} is {@code null},
+         *                              or {@code msgSupplier} is {@code null}.
          * @implSpec When logging is enabled for the given level, the default
          * implementation for this method calls
          * {@code this.log(level, (ResourceBundle)null, msgSupplier.get(), (Object[])null);}
-         *
-         * @param level the log message level.
-         * @param msgSupplier a supplier function that produces a message.
-         *
-         * @throws NullPointerException if {@code level} is {@code null},
-         *         or {@code msgSupplier} is {@code null}.
          */
         public default void log(Level level, Supplier<String> msgSupplier) {
             Objects.requireNonNull(msgSupplier);
@@ -1287,21 +1234,19 @@ public final class System {
 
         /**
          * Logs a message produced from the given object.
-         *
+         * <p>
          * If the logger is currently enabled for the given log message level then
          * a message is logged that, by default, is the result produced from
          * calling  toString on the given object.
          * Otherwise, the object is not operated on.
          *
+         * @param level the log message level.
+         * @param obj   the object to log.
+         * @throws NullPointerException if {@code level} is {@code null}, or
+         *                              {@code obj} is {@code null}.
          * @implSpec When logging is enabled for the given level, the default
          * implementation for this method calls
          * {@code this.log(level, (ResourceBundle)null, obj.toString(), (Object[])null);}
-         *
-         * @param level the log message level.
-         * @param obj the object to log.
-         *
-         * @throws NullPointerException if {@code level} is {@code null}, or
-         *         {@code obj} is {@code null}.
          */
         public default void log(Level level, Object obj) {
             Objects.requireNonNull(obj);
@@ -1313,19 +1258,17 @@ public final class System {
         /**
          * Logs a message associated with a given throwable.
          *
+         * @param level  the log message level.
+         * @param msg    the string message (or a key in the message catalog, if
+         *               this logger is a {@link
+         *               LoggerFinder#getLocalizedLogger(java.lang.String,
+         *               java.util.ResourceBundle, java.lang.Module) localized logger});
+         *               can be {@code null}.
+         * @param thrown a {@code Throwable} associated with the log message;
+         *               can be {@code null}.
+         * @throws NullPointerException if {@code level} is {@code null}.
          * @implSpec The default implementation for this method calls
          * {@code this.log(level, (ResourceBundle)null, msg, thrown);}
-         *
-         * @param level the log message level.
-         * @param msg the string message (or a key in the message catalog, if
-         * this logger is a {@link
-         * LoggerFinder#getLocalizedLogger(java.lang.String,
-         * java.util.ResourceBundle, java.lang.Module) localized logger});
-         * can be {@code null}.
-         * @param thrown a {@code Throwable} associated with the log message;
-         *        can be {@code null}.
-         *
-         * @throws NullPointerException if {@code level} is {@code null}.
          */
         public default void log(Level level, String msg, Throwable thrown) {
             this.log(level, null, msg, thrown);
@@ -1333,25 +1276,23 @@ public final class System {
 
         /**
          * Logs a lazily supplied message associated with a given throwable.
-         *
+         * <p>
          * If the logger is currently enabled for the given log message level
          * then a message is logged that is the result produced by the
          * given supplier function.  Otherwise, the supplier is not operated on.
          *
+         * @param level       one of the log message level identifiers.
+         * @param msgSupplier a supplier function that produces a message.
+         * @param thrown      a {@code Throwable} associated with log message;
+         *                    can be {@code null}.
+         * @throws NullPointerException if {@code level} is {@code null}, or
+         *                              {@code msgSupplier} is {@code null}.
          * @implSpec When logging is enabled for the given level, the default
          * implementation for this method calls
          * {@code this.log(level, (ResourceBundle)null, msgSupplier.get(), thrown);}
-         *
-         * @param level one of the log message level identifiers.
-         * @param msgSupplier a supplier function that produces a message.
-         * @param thrown a {@code Throwable} associated with log message;
-         *               can be {@code null}.
-         *
-         * @throws NullPointerException if {@code level} is {@code null}, or
-         *                               {@code msgSupplier} is {@code null}.
          */
         public default void log(Level level, Supplier<String> msgSupplier,
-                Throwable thrown) {
+                                Throwable thrown) {
             Objects.requireNonNull(msgSupplier);
             if (isLoggable(Objects.requireNonNull(level))) {
                 this.log(level, null, msgSupplier.get(), thrown);
@@ -1361,20 +1302,18 @@ public final class System {
         /**
          * Logs a message with an optional list of parameters.
          *
+         * @param level  one of the log message level identifiers.
+         * @param format the string message format in {@link
+         *               java.text.MessageFormat} format, (or a key in the message
+         *               catalog, if this logger is a {@link
+         *               LoggerFinder#getLocalizedLogger(java.lang.String,
+         *               java.util.ResourceBundle, java.lang.Module) localized logger});
+         *               can be {@code null}.
+         * @param params an optional list of parameters to the message (may be
+         *               none).
+         * @throws NullPointerException if {@code level} is {@code null}.
          * @implSpec The default implementation for this method calls
          * {@code this.log(level, (ResourceBundle)null, format, params);}
-         *
-         * @param level one of the log message level identifiers.
-         * @param format the string message format in {@link
-         * java.text.MessageFormat} format, (or a key in the message
-         * catalog, if this logger is a {@link
-         * LoggerFinder#getLocalizedLogger(java.lang.String,
-         * java.util.ResourceBundle, java.lang.Module) localized logger});
-         * can be {@code null}.
-         * @param params an optional list of parameters to the message (may be
-         * none).
-         *
-         * @throws NullPointerException if {@code level} is {@code null}.
          */
         public default void log(Level level, String format, Object... params) {
             this.log(level, null, format, params);
@@ -1382,51 +1321,49 @@ public final class System {
 
         /**
          * Logs a localized message associated with a given throwable.
-         *
+         * <p>
          * If the given resource bundle is non-{@code null},  the {@code msg}
          * string is localized using the given resource bundle.
          * Otherwise the {@code msg} string is not localized.
          *
-         * @param level the log message level.
+         * @param level  the log message level.
          * @param bundle a resource bundle to localize {@code msg}; can be
-         * {@code null}.
-         * @param msg the string message (or a key in the message catalog,
-         *            if {@code bundle} is not {@code null}); can be {@code null}.
+         *               {@code null}.
+         * @param msg    the string message (or a key in the message catalog,
+         *               if {@code bundle} is not {@code null}); can be {@code null}.
          * @param thrown a {@code Throwable} associated with the log message;
-         *        can be {@code null}.
-         *
+         *               can be {@code null}.
          * @throws NullPointerException if {@code level} is {@code null}.
          */
         public void log(Level level, ResourceBundle bundle, String msg,
-                Throwable thrown);
+                        Throwable thrown);
 
         /**
          * Logs a message with resource bundle and an optional list of
          * parameters.
-         *
+         * <p>
          * If the given resource bundle is non-{@code null},  the {@code format}
          * string is localized using the given resource bundle.
          * Otherwise the {@code format} string is not localized.
          *
-         * @param level the log message level.
+         * @param level  the log message level.
          * @param bundle a resource bundle to localize {@code format}; can be
-         * {@code null}.
+         *               {@code null}.
          * @param format the string message format in {@link
-         * java.text.MessageFormat} format, (or a key in the message
-         * catalog if {@code bundle} is not {@code null}); can be {@code null}.
+         *               java.text.MessageFormat} format, (or a key in the message
+         *               catalog if {@code bundle} is not {@code null}); can be {@code null}.
          * @param params an optional list of parameters to the message (may be
-         * none).
-         *
+         *               none).
          * @throws NullPointerException if {@code level} is {@code null}.
          */
         public void log(Level level, ResourceBundle bundle, String format,
-                Object... params);
+                        Object... params);
     }
 
     /**
      * The {@code LoggerFinder} service is responsible for creating, managing,
      * and configuring loggers to the underlying framework it uses.
-     *
+     * <p>
      * A logger finder is a concrete implementation of this class that has a
      * zero-argument constructor and implements the abstract methods defined
      * by this class.
@@ -1508,7 +1445,6 @@ public final class System {
      *
      * @see java.lang.System
      * @see java.lang.System.Logger
-     *
      * @since 9
      */
     public static abstract class LoggerFinder {
@@ -1523,14 +1459,13 @@ public final class System {
         /**
          * Creates a new instance of {@code LoggerFinder}.
          *
-         * @implNote It is recommended that a {@code LoggerFinder} service
-         *   implementation does not perform any heavy initialization in its
-         *   constructor, in order to avoid possible risks of deadlock or class
-         *   loading cycles during the instantiation of the service provider.
-         *
          * @throws SecurityException if a security manager is present and its
-         *         {@code checkPermission} method doesn't allow the
-         *         {@code RuntimePermission("loggerFinder")}.
+         *                           {@code checkPermission} method doesn't allow the
+         *                           {@code RuntimePermission("loggerFinder")}.
+         * @implNote It is recommended that a {@code LoggerFinder} service
+         * implementation does not perform any heavy initialization in its
+         * constructor, in order to avoid possible risks of deadlock or class
+         * loading cycles during the instantiation of the service provider.
          */
         protected LoggerFinder() {
             this(checkPermission());
@@ -1552,16 +1487,15 @@ public final class System {
          * Returns an instance of {@link Logger Logger}
          * for the given {@code module}.
          *
-         * @param name the name of the logger.
+         * @param name   the name of the logger.
          * @param module the module for which the logger is being requested.
-         *
          * @return a {@link Logger logger} suitable for use within the given
-         *         module.
+         * module.
          * @throws NullPointerException if {@code name} is {@code null} or
-         *        {@code module} is {@code null}.
-         * @throws SecurityException if a security manager is present and its
-         *         {@code checkPermission} method doesn't allow the
-         *         {@code RuntimePermission("loggerFinder")}.
+         *                              {@code module} is {@code null}.
+         * @throws SecurityException    if a security manager is present and its
+         *                              {@code checkPermission} method doesn't allow the
+         *                              {@code RuntimePermission("loggerFinder")}.
          */
         public abstract Logger getLogger(String name, Module module);
 
@@ -1571,6 +1505,16 @@ public final class System {
          * The returned logger will use the provided resource bundle for
          * message localization.
          *
+         * @param name   the name of the logger.
+         * @param bundle a resource bundle; can be {@code null}.
+         * @param module the module for which the logger is being requested.
+         * @return an instance of {@link Logger Logger}  which will use the
+         * provided resource bundle for message localization.
+         * @throws NullPointerException if {@code name} is {@code null} or
+         *                              {@code module} is {@code null}.
+         * @throws SecurityException    if a security manager is present and its
+         *                              {@code checkPermission} method doesn't allow the
+         *                              {@code RuntimePermission("loggerFinder")}.
          * @implSpec By default, this method calls {@link
          * #getLogger(java.lang.String, java.lang.Module)
          * this.getLogger(name, module)} to obtain a logger, then wraps that
@@ -1593,18 +1537,6 @@ public final class System {
          * mechanism for localizing log messages, then such a
          * {@code LoggerFinder} would be free to return a logger
          * that makes direct use of the mechanism provided by the backend.
-         *
-         * @param name    the name of the logger.
-         * @param bundle  a resource bundle; can be {@code null}.
-         * @param module  the module for which the logger is being requested.
-         * @return an instance of {@link Logger Logger}  which will use the
-         * provided resource bundle for message localization.
-         *
-         * @throws NullPointerException if {@code name} is {@code null} or
-         *         {@code module} is {@code null}.
-         * @throws SecurityException if a security manager is present and its
-         *         {@code checkPermission} method doesn't allow the
-         *         {@code RuntimePermission("loggerFinder")}.
          */
         public Logger getLocalizedLogger(String name, ResourceBundle bundle,
                                          Module module) {
@@ -1617,11 +1549,11 @@ public final class System {
          * the Java Runtime.  See the class specification of how the
          * {@link LoggerFinder LoggerFinder} implementation is located and
          * loaded.
-
+         *
          * @return the {@link LoggerFinder LoggerFinder} instance.
          * @throws SecurityException if a security manager is present and its
-         *         {@code checkPermission} method doesn't allow the
-         *         {@code RuntimePermission("loggerFinder")}.
+         *                           {@code checkPermission} method doesn't allow the
+         *                           {@code RuntimePermission("loggerFinder")}.
          */
         public static LoggerFinder getLoggerFinder() {
             final SecurityManager sm = System.getSecurityManager();
@@ -1633,6 +1565,7 @@ public final class System {
 
 
         private static volatile LoggerFinder service;
+
         static LoggerFinder accessProvider() {
             // We do not need to synchronize: LoggerFinderLoader will
             // always return the same instance, so if we don't have it,
@@ -1653,8 +1586,13 @@ public final class System {
      * Returns an instance of {@link Logger Logger} for the caller's
      * use.
      *
-     * @implSpec
-     * Instances returned by this method route messages to loggers
+     * @param name the name of the logger.
+     * @return an instance of {@link Logger} that can be used by the calling
+     * class.
+     * @throws NullPointerException   if {@code name} is {@code null}.
+     * @throws IllegalCallerException if there is no Java caller frame on the
+     *                                stack.
+     * @implSpec Instances returned by this method route messages to loggers
      * obtained by calling {@link LoggerFinder#getLogger(java.lang.String,
      * java.lang.Module) LoggerFinder.getLogger(name, module)}, where
      * {@code module} is the caller's module.
@@ -1666,21 +1604,11 @@ public final class System {
      * LoggerFinder#getLoggerFinder() LoggerFinder} to obtain a logger instead.
      * Note that doing the latter may eagerly initialize the underlying
      * logging system.
-     *
-     * @apiNote
-     * This method may defer calling the {@link
+     * @apiNote This method may defer calling the {@link
      * LoggerFinder#getLogger(java.lang.String, java.lang.Module)
      * LoggerFinder.getLogger} method to create an actual logger supplied by
      * the logging backend, for instance, to allow loggers to be obtained during
      * the system initialization time.
-     *
-     * @param name the name of the logger.
-     * @return an instance of {@link Logger} that can be used by the calling
-     *         class.
-     * @throws NullPointerException if {@code name} is {@code null}.
-     * @throws IllegalCallerException if there is no Java caller frame on the
-     *         stack.
-     *
      * @since 9
      */
     @CallerSensitive
@@ -1699,8 +1627,15 @@ public final class System {
      * The returned logger will use the provided resource bundle for message
      * localization.
      *
-     * @implSpec
-     * The returned logger will perform message localization as specified
+     * @param name   the name of the logger.
+     * @param bundle a resource bundle.
+     * @return an instance of {@link Logger} which will use the provided
+     * resource bundle for message localization.
+     * @throws NullPointerException   if {@code name} is {@code null} or
+     *                                {@code bundle} is {@code null}.
+     * @throws IllegalCallerException if there is no Java caller frame on the
+     *                                stack.
+     * @implSpec The returned logger will perform message localization as specified
      * by {@link LoggerFinder#getLocalizedLogger(java.lang.String,
      * java.util.ResourceBundle, java.lang.Module)
      * LoggerFinder.getLocalizedLogger(name, bundle, module)}, where
@@ -1713,9 +1648,7 @@ public final class System {
      * LoggerFinder#getLoggerFinder() LoggerFinder} to obtain a logger instead.
      * Note that doing the latter may eagerly initialize the underlying
      * logging system.
-     *
-     * @apiNote
-     * This method is intended to be used after the system is fully initialized.
+     * @apiNote This method is intended to be used after the system is fully initialized.
      * This method may trigger the immediate loading and initialization
      * of the {@link LoggerFinder} service, which may cause issues if the
      * Java Runtime is not ready to initialize the concrete service
@@ -1724,16 +1657,6 @@ public final class System {
      * need to log localized messages should create a logger using
      * {@link #getLogger(java.lang.String)} and then use the log methods that
      * take a resource bundle as parameter.
-     *
-     * @param name    the name of the logger.
-     * @param bundle  a resource bundle.
-     * @return an instance of {@link Logger} which will use the provided
-     * resource bundle for message localization.
-     * @throws NullPointerException if {@code name} is {@code null} or
-     *         {@code bundle} is {@code null}.
-     * @throws IllegalCallerException if there is no Java caller frame on the
-     *         stack.
-     *
      * @since 9
      */
     @CallerSensitive
@@ -1753,7 +1676,7 @@ public final class System {
                     () -> LoggerFinder.accessProvider()
                             .getLocalizedLogger(name, rb, caller.getModule());
             return AccessController.doPrivileged(pa, null,
-                                         LoggerFinder.LOGGERFINDER_PERMISSION);
+                    LoggerFinder.LOGGERFINDER_PERMISSION);
         }
         return LoggerFinder.accessProvider()
                 .getLocalizedLogger(name, rb, caller.getModule());
@@ -1773,11 +1696,10 @@ public final class System {
      * Runtime.getRuntime().exit(n)
      * </pre></blockquote>
      *
-     * @param      status   exit status.
-     * @throws  SecurityException
-     *        if a security manager exists and its {@code checkExit}
-     *        method doesn't allow exit with the specified status.
-     * @see        java.lang.Runtime#exit(int)
+     * @param status exit status.
+     * @throws SecurityException if a security manager exists and its {@code checkExit}
+     *                           method doesn't allow exit with the specified status.
+     * @see java.lang.Runtime#exit(int)
      */
     public static void exit(int status) {
         Runtime.getRuntime().exit(status);
@@ -1802,7 +1724,7 @@ public final class System {
      * Runtime.getRuntime().gc()
      * </pre></blockquote>
      *
-     * @see     java.lang.Runtime#gc()
+     * @see java.lang.Runtime#gc()
      */
     public static void gc() {
         Runtime.getRuntime().gc();
@@ -1810,7 +1732,7 @@ public final class System {
 
     /**
      * Runs the finalization methods of any objects pending finalization.
-     *
+     * <p>
      * Calling this method suggests that the Java Virtual Machine expend
      * effort toward running the {@code finalize} methods of objects
      * that have been found to be discarded but whose {@code finalize}
@@ -1824,7 +1746,7 @@ public final class System {
      * Runtime.getRuntime().runFinalization()
      * </pre></blockquote>
      *
-     * @see     java.lang.Runtime#runFinalization()
+     * @see java.lang.Runtime#runFinalization()
      */
     public static void runFinalization() {
         Runtime.getRuntime().runFinalization();
@@ -1833,7 +1755,7 @@ public final class System {
     /**
      * Loads the native library specified by the filename argument.  The filename
      * argument must be an absolute path name.
-     *
+     * <p>
      * If the filename argument, when stripped of any platform-specific library
      * prefix, path, and file extension, indicates a library whose name is,
      * for example, L, and a native library called L is statically linked
@@ -1843,7 +1765,7 @@ public final class System {
      * file system.
      * See the <a href="{@docRoot}/../specs/jni/index.html"> JNI Specification</a>
      * for more details.
-     *
+     * <p>
      * Otherwise, the filename argument is mapped to a native library image in
      * an implementation-dependent manner.
      *
@@ -1854,17 +1776,17 @@ public final class System {
      * Runtime.getRuntime().load(name)
      * </pre></blockquote>
      *
-     * @param      filename   the file to load.
-     * @throws     SecurityException  if a security manager exists and its
-     *             {@code checkLink} method doesn't allow
-     *             loading of the specified dynamic library
-     * @throws     UnsatisfiedLinkError  if either the filename is not an
-     *             absolute path name, the native library is not statically
-     *             linked with the VM, or the library cannot be mapped to
-     *             a native library image by the host system.
-     * @throws     NullPointerException if {@code filename} is {@code null}
-     * @see        java.lang.Runtime#load(java.lang.String)
-     * @see        java.lang.SecurityManager#checkLink(java.lang.String)
+     * @param filename the file to load.
+     * @throws SecurityException    if a security manager exists and its
+     *                              {@code checkLink} method doesn't allow
+     *                              loading of the specified dynamic library
+     * @throws UnsatisfiedLinkError if either the filename is not an
+     *                              absolute path name, the native library is not statically
+     *                              linked with the VM, or the library cannot be mapped to
+     *                              a native library image by the host system.
+     * @throws NullPointerException if {@code filename} is {@code null}
+     * @see java.lang.Runtime#load(java.lang.String)
+     * @see java.lang.SecurityManager#checkLink(java.lang.String)
      */
     @CallerSensitive
     public static void load(String filename) {
@@ -1879,7 +1801,7 @@ public final class System {
      * JNI_OnLoad_{@code libname} function exported by the library is invoked.
      * See the <a href="{@docRoot}/../specs/jni/index.html"> JNI Specification</a>
      * for more details.
-     *
+     * <p>
      * Otherwise, the libname argument is loaded from a system library
      * location and mapped to a native library image in an implementation-
      * dependent manner.
@@ -1890,17 +1812,17 @@ public final class System {
      * Runtime.getRuntime().loadLibrary(name)
      * </pre></blockquote>
      *
-     * @param      libname   the name of the library.
-     * @throws     SecurityException  if a security manager exists and its
-     *             {@code checkLink} method doesn't allow
-     *             loading of the specified dynamic library
-     * @throws     UnsatisfiedLinkError if either the libname argument
-     *             contains a file path, the native library is not statically
-     *             linked with the VM,  or the library cannot be mapped to a
-     *             native library image by the host system.
-     * @throws     NullPointerException if {@code libname} is {@code null}
-     * @see        java.lang.Runtime#loadLibrary(java.lang.String)
-     * @see        java.lang.SecurityManager#checkLink(java.lang.String)
+     * @param libname the name of the library.
+     * @throws SecurityException    if a security manager exists and its
+     *                              {@code checkLink} method doesn't allow
+     *                              loading of the specified dynamic library
+     * @throws UnsatisfiedLinkError if either the libname argument
+     *                              contains a file path, the native library is not statically
+     *                              linked with the VM,  or the library cannot be mapped to a
+     *                              native library image by the host system.
+     * @throws NullPointerException if {@code libname} is {@code null}
+     * @see java.lang.Runtime#loadLibrary(java.lang.String)
+     * @see java.lang.SecurityManager#checkLink(java.lang.String)
      */
     @CallerSensitive
     public static void loadLibrary(String libname) {
@@ -1911,12 +1833,12 @@ public final class System {
      * Maps a library name into a platform-specific string representing
      * a native library.
      *
-     * @param      libname the name of the library.
-     * @return     a platform-dependent native library name.
-     * @throws     NullPointerException if {@code libname} is {@code null}
-     * @see        java.lang.System#loadLibrary(java.lang.String)
-     * @see        java.lang.ClassLoader#findLibrary(java.lang.String)
-     * @since      1.2
+     * @param libname the name of the library.
+     * @return a platform-dependent native library name.
+     * @throws NullPointerException if {@code libname} is {@code null}
+     * @see java.lang.System#loadLibrary(java.lang.String)
+     * @see java.lang.ClassLoader#findLibrary(java.lang.String)
+     * @since 1.2
      */
     public static native String mapLibraryName(String libname);
 
@@ -1924,10 +1846,11 @@ public final class System {
      * Create PrintStream for stdout/err based on encoding.
      */
     private static PrintStream newPrintStream(FileOutputStream fos, String enc) {
-       if (enc != null) {
+        if (enc != null) {
             try {
                 return new PrintStream(new BufferedOutputStream(fos, 128), true, enc);
-            } catch (UnsupportedEncodingException uee) {}
+            } catch (UnsupportedEncodingException uee) {
+            }
         }
         return new PrintStream(new BufferedOutputStream(fos, 128), true);
     }
@@ -1935,10 +1858,10 @@ public final class System {
     /**
      * Logs an exception/error at initialization time to stdout or stderr.
      *
-     * @param printToStderr to print to stderr rather than stdout
+     * @param printToStderr   to print to stderr rather than stdout
      * @param printStackTrace to print the stack trace
-     * @param msg the message to print before the exception, can be {@code null}
-     * @param e the exception or error
+     * @param msg             the message to print before the exception, can be {@code null}
+     * @param e               the exception or error
      */
     private static void logInitException(boolean printToStderr,
                                          boolean printStackTrace,
@@ -2071,7 +1994,7 @@ public final class System {
             bootLayer = ModuleBootstrap.boot();
         } catch (Exception | Error e) {
             logInitException(printToStderr, printStackTrace,
-                             "Error occurred during initialization of boot layer", e);
+                    "Error occurred during initialization of boot layer", e);
             return -1; // JNI_ERR
         }
 
@@ -2114,10 +2037,10 @@ public final class System {
                         // Must be a public subclass of SecurityManager with
                         // a public no-arg constructor
                         if (!SecurityManager.class.isAssignableFrom(c) ||
-                            !Modifier.isPublic(c.getModifiers()) ||
-                            !Modifier.isPublic(ctor.getModifiers())) {
+                                !Modifier.isPublic(c.getModifiers()) ||
+                                !Modifier.isPublic(ctor.getModifiers())) {
                             throw new Error("Could not create SecurityManager: "
-                                             + ctor.toString());
+                                    + ctor.toString());
                         }
                         // custom security manager may be in non-exported package
                         ctor.setAccessible(true);
@@ -2148,136 +2071,211 @@ public final class System {
     private static void setJavaLangAccess() {
         // Allow privileged classes outside of java.lang
         SharedSecrets.setJavaLangAccess(new JavaLangAccess() {
+            @Override
             public List<Method> getDeclaredPublicMethods(Class<?> klass, String name, Class<?>... parameterTypes) {
                 return klass.getDeclaredPublicMethods(name, parameterTypes);
             }
+
+            @Override
             public jdk.internal.reflect.ConstantPool getConstantPool(Class<?> klass) {
                 return klass.getConstantPool();
             }
+
+            @Override
             public boolean casAnnotationType(Class<?> klass, AnnotationType oldType, AnnotationType newType) {
                 return klass.casAnnotationType(oldType, newType);
             }
+
+            @Override
             public AnnotationType getAnnotationType(Class<?> klass) {
                 return klass.getAnnotationType();
             }
+
+            @Override
             public Map<Class<? extends Annotation>, Annotation> getDeclaredAnnotationMap(Class<?> klass) {
                 return klass.getDeclaredAnnotationMap();
             }
+
+            @Override
             public byte[] getRawClassAnnotations(Class<?> klass) {
                 return klass.getRawAnnotations();
             }
+
+            @Override
             public byte[] getRawClassTypeAnnotations(Class<?> klass) {
                 return klass.getRawTypeAnnotations();
             }
+
+            @Override
             public byte[] getRawExecutableTypeAnnotations(Executable executable) {
                 return Class.getExecutableTypeAnnotationBytes(executable);
             }
+
+            @Override
             public <E extends Enum<E>>
             E[] getEnumConstantsShared(Class<E> klass) {
                 return klass.getEnumConstantsShared();
             }
+
+            @Override
             public void blockedOn(Interruptible b) {
                 Thread.blockedOn(b);
             }
+
+            @Override
             public void registerShutdownHook(int slot, boolean registerShutdownInProgress, Runnable hook) {
                 Shutdown.add(slot, registerShutdownInProgress, hook);
             }
+
+            @Override
             public Thread newThreadWithAcc(Runnable target, AccessControlContext acc) {
                 return new Thread(target, acc);
             }
+
+            @Override
             @SuppressWarnings("deprecation")
             public void invokeFinalize(Object o) throws Throwable {
                 o.finalize();
             }
+
+            @Override
             public ConcurrentHashMap<?, ?> createOrGetClassLoaderValueMap(ClassLoader cl) {
                 return cl.createOrGetClassLoaderValueMap();
             }
+
+            @Override
             public Class<?> defineClass(ClassLoader loader, String name, byte[] b, ProtectionDomain pd, String source) {
                 return ClassLoader.defineClass1(loader, name, b, 0, b.length, pd, source);
             }
+
+            @Override
             public Class<?> findBootstrapClassOrNull(ClassLoader cl, String name) {
                 return cl.findBootstrapClassOrNull(name);
             }
+
+            @Override
             public Package definePackage(ClassLoader cl, String name, Module module) {
                 return cl.definePackage(name, module);
             }
+
+            @Override
             public String fastUUID(long lsb, long msb) {
                 return Long.fastUUID(lsb, msb);
             }
+
+            @Override
             public void addNonExportedPackages(ModuleLayer layer) {
                 SecurityManager.addNonExportedPackages(layer);
             }
+
+            @Override
             public void invalidatePackageAccessCache() {
                 SecurityManager.invalidatePackageAccessCache();
             }
+
+            @Override
             public Module defineModule(ClassLoader loader,
                                        ModuleDescriptor descriptor,
                                        URI uri) {
                 return new Module(null, loader, descriptor, uri);
             }
+
+            @Override
             public Module defineUnnamedModule(ClassLoader loader) {
                 return new Module(loader);
             }
+
+            @Override
             public void addReads(Module m1, Module m2) {
                 m1.implAddReads(m2);
             }
+
+            @Override
             public void addReadsAllUnnamed(Module m) {
                 m.implAddReadsAllUnnamed();
             }
+
+            @Override
             public void addExports(Module m, String pn, Module other) {
                 m.implAddExports(pn, other);
             }
+
+            @Override
             public void addExportsToAllUnnamed(Module m, String pn) {
                 m.implAddExportsToAllUnnamed(pn);
             }
+
+            @Override
             public void addOpens(Module m, String pn, Module other) {
                 m.implAddOpens(pn, other);
             }
+
+            @Override
             public void addOpensToAllUnnamed(Module m, String pn) {
                 m.implAddOpensToAllUnnamed(pn);
             }
+
+            @Override
             public void addOpensToAllUnnamed(Module m, Iterator<String> packages) {
                 m.implAddOpensToAllUnnamed(packages);
             }
+
+            @Override
             public void addUses(Module m, Class<?> service) {
                 m.implAddUses(service);
             }
+
+            @Override
             public boolean isReflectivelyExported(Module m, String pn, Module other) {
                 return m.isReflectivelyExported(pn, other);
             }
+
+            @Override
             public boolean isReflectivelyOpened(Module m, String pn, Module other) {
                 return m.isReflectivelyOpened(pn, other);
             }
+
+            @Override
             public ServicesCatalog getServicesCatalog(ModuleLayer layer) {
                 return layer.getServicesCatalog();
             }
+
+            @Override
             public Stream<ModuleLayer> layers(ModuleLayer layer) {
                 return layer.layers();
             }
+
+            @Override
             public Stream<ModuleLayer> layers(ClassLoader loader) {
                 return ModuleLayer.layers(loader);
             }
 
-            public String newStringNoRepl(byte[] bytes, Charset cs) throws CharacterCodingException  {
+            @Override
+            public String newStringNoRepl(byte[] bytes, Charset cs) throws CharacterCodingException {
                 return StringCoding.newStringNoRepl(bytes, cs);
             }
 
+            @Override
             public byte[] getBytesNoRepl(String s, Charset cs) throws CharacterCodingException {
                 return StringCoding.getBytesNoRepl(s, cs);
             }
 
+            @Override
             public String newStringUTF8NoRepl(byte[] bytes, int off, int len) {
                 return StringCoding.newStringUTF8NoRepl(bytes, off, len);
             }
 
+            @Override
             public byte[] getBytesUTF8NoRepl(String s) {
                 return StringCoding.getBytesUTF8NoRepl(s);
             }
 
+            @Override
             public void setCause(Throwable t, Throwable cause) {
                 t.setCause(cause);
             }
 
+            @Override
             public void loadLibrary(Class<?> caller, String library) {
                 assert library.indexOf(java.io.File.separatorChar) < 0;
                 ClassLoader.loadLibrary(caller, library, false);
