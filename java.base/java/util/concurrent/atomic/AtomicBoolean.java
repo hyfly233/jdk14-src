@@ -45,12 +45,13 @@ import java.lang.invoke.VarHandle;
  * applications such as atomically updated flags, and cannot be used
  * as a replacement for a {@link java.lang.Boolean}.
  *
- * @since 1.5
  * @author Doug Lea
+ * @since 1.5
  */
 public class AtomicBoolean implements java.io.Serializable {
     private static final long serialVersionUID = 4654671469794556979L;
     private static final VarHandle VALUE;
+
     static {
         try {
             MethodHandles.Lookup l = MethodHandles.lookup();
@@ -93,14 +94,14 @@ public class AtomicBoolean implements java.io.Serializable {
      * with memory effects as specified by {@link VarHandle#compareAndSet}.
      *
      * @param expectedValue the expected value
-     * @param newValue the new value
+     * @param newValue      the new value
      * @return {@code true} if successful. False return indicates that
      * the actual value was not equal to the expected value.
      */
     public final boolean compareAndSet(boolean expectedValue, boolean newValue) {
         return VALUE.compareAndSet(this,
-                                   (expectedValue ? 1 : 0),
-                                   (newValue ? 1 : 0));
+                (expectedValue ? 1 : 0),
+                (newValue ? 1 : 0));
     }
 
     /**
@@ -108,22 +109,21 @@ public class AtomicBoolean implements java.io.Serializable {
      * if the current value {@code == expectedValue},
      * with memory effects as specified by {@link VarHandle#weakCompareAndSetPlain}.
      *
+     * @param expectedValue the expected value
+     * @param newValue      the new value
+     * @return {@code true} if successful
+     * @see #weakCompareAndSetPlain
      * @deprecated This method has plain memory effects but the method
      * name implies volatile memory effects (see methods such as
      * {@link #compareAndExchange} and {@link #compareAndSet}).  To avoid
      * confusion over plain or volatile memory effects it is recommended that
      * the method {@link #weakCompareAndSetPlain} be used instead.
-     *
-     * @param expectedValue the expected value
-     * @param newValue the new value
-     * @return {@code true} if successful
-     * @see #weakCompareAndSetPlain
      */
-    @Deprecated(since="9")
+    @Deprecated(since = "9")
     public boolean weakCompareAndSet(boolean expectedValue, boolean newValue) {
         return VALUE.weakCompareAndSetPlain(this,
-                                            (expectedValue ? 1 : 0),
-                                            (newValue ? 1 : 0));
+                (expectedValue ? 1 : 0),
+                (newValue ? 1 : 0));
     }
 
     /**
@@ -132,14 +132,14 @@ public class AtomicBoolean implements java.io.Serializable {
      * with memory effects as specified by {@link VarHandle#weakCompareAndSetPlain}.
      *
      * @param expectedValue the expected value
-     * @param newValue the new value
+     * @param newValue      the new value
      * @return {@code true} if successful
      * @since 9
      */
     public boolean weakCompareAndSetPlain(boolean expectedValue, boolean newValue) {
         return VALUE.weakCompareAndSetPlain(this,
-                                            (expectedValue ? 1 : 0),
-                                            (newValue ? 1 : 0));
+                (expectedValue ? 1 : 0),
+                (newValue ? 1 : 0));
     }
 
     /**
@@ -171,13 +171,15 @@ public class AtomicBoolean implements java.io.Serializable {
      * @return the previous value
      */
     public final boolean getAndSet(boolean newValue) {
-        return (int)VALUE.getAndSet(this, (newValue ? 1 : 0)) != 0;
+        return (int) VALUE.getAndSet(this, (newValue ? 1 : 0)) != 0;
     }
 
     /**
      * Returns the String representation of the current value.
+     *
      * @return the String representation of the current value
      */
+    @Override
     public String toString() {
         return Boolean.toString(get());
     }
@@ -192,7 +194,7 @@ public class AtomicBoolean implements java.io.Serializable {
      * @since 9
      */
     public final boolean getPlain() {
-        return (int)VALUE.get(this) != 0;
+        return (int) VALUE.get(this) != 0;
     }
 
     /**
@@ -215,7 +217,7 @@ public class AtomicBoolean implements java.io.Serializable {
      * @since 9
      */
     public final boolean getOpaque() {
-        return (int)VALUE.getOpaque(this) != 0;
+        return (int) VALUE.getOpaque(this) != 0;
     }
 
     /**
@@ -237,7 +239,7 @@ public class AtomicBoolean implements java.io.Serializable {
      * @since 9
      */
     public final boolean getAcquire() {
-        return (int)VALUE.getAcquire(this) != 0;
+        return (int) VALUE.getAcquire(this) != 0;
     }
 
     /**
@@ -258,15 +260,15 @@ public class AtomicBoolean implements java.io.Serializable {
      * {@link VarHandle#compareAndExchange}.
      *
      * @param expectedValue the expected value
-     * @param newValue the new value
+     * @param newValue      the new value
      * @return the witness value, which will be the same as the
      * expected value if successful
      * @since 9
      */
     public final boolean compareAndExchange(boolean expectedValue, boolean newValue) {
-        return (int)VALUE.compareAndExchange(this,
-                                             (expectedValue ? 1 : 0),
-                                             (newValue ? 1 : 0)) != 0;
+        return (int) VALUE.compareAndExchange(this,
+                (expectedValue ? 1 : 0),
+                (newValue ? 1 : 0)) != 0;
     }
 
     /**
@@ -276,15 +278,15 @@ public class AtomicBoolean implements java.io.Serializable {
      * {@link VarHandle#compareAndExchangeAcquire}.
      *
      * @param expectedValue the expected value
-     * @param newValue the new value
+     * @param newValue      the new value
      * @return the witness value, which will be the same as the
      * expected value if successful
      * @since 9
      */
     public final boolean compareAndExchangeAcquire(boolean expectedValue, boolean newValue) {
-        return (int)VALUE.compareAndExchangeAcquire(this,
-                                                    (expectedValue ? 1 : 0),
-                                                    (newValue ? 1 : 0)) != 0;
+        return (int) VALUE.compareAndExchangeAcquire(this,
+                (expectedValue ? 1 : 0),
+                (newValue ? 1 : 0)) != 0;
     }
 
     /**
@@ -294,15 +296,15 @@ public class AtomicBoolean implements java.io.Serializable {
      * {@link VarHandle#compareAndExchangeRelease}.
      *
      * @param expectedValue the expected value
-     * @param newValue the new value
+     * @param newValue      the new value
      * @return the witness value, which will be the same as the
      * expected value if successful
      * @since 9
      */
     public final boolean compareAndExchangeRelease(boolean expectedValue, boolean newValue) {
-        return (int)VALUE.compareAndExchangeRelease(this,
-                                                    (expectedValue ? 1 : 0),
-                                                    (newValue ? 1 : 0)) != 0;
+        return (int) VALUE.compareAndExchangeRelease(this,
+                (expectedValue ? 1 : 0),
+                (newValue ? 1 : 0)) != 0;
     }
 
     /**
@@ -312,14 +314,14 @@ public class AtomicBoolean implements java.io.Serializable {
      * {@link VarHandle#weakCompareAndSet}.
      *
      * @param expectedValue the expected value
-     * @param newValue the new value
+     * @param newValue      the new value
      * @return {@code true} if successful
      * @since 9
      */
     public final boolean weakCompareAndSetVolatile(boolean expectedValue, boolean newValue) {
         return VALUE.weakCompareAndSet(this,
-                                       (expectedValue ? 1 : 0),
-                                       (newValue ? 1 : 0));
+                (expectedValue ? 1 : 0),
+                (newValue ? 1 : 0));
     }
 
     /**
@@ -329,14 +331,14 @@ public class AtomicBoolean implements java.io.Serializable {
      * {@link VarHandle#weakCompareAndSetAcquire}.
      *
      * @param expectedValue the expected value
-     * @param newValue the new value
+     * @param newValue      the new value
      * @return {@code true} if successful
      * @since 9
      */
     public final boolean weakCompareAndSetAcquire(boolean expectedValue, boolean newValue) {
         return VALUE.weakCompareAndSetAcquire(this,
-                                              (expectedValue ? 1 : 0),
-                                              (newValue ? 1 : 0));
+                (expectedValue ? 1 : 0),
+                (newValue ? 1 : 0));
     }
 
     /**
@@ -346,14 +348,14 @@ public class AtomicBoolean implements java.io.Serializable {
      * {@link VarHandle#weakCompareAndSetRelease}.
      *
      * @param expectedValue the expected value
-     * @param newValue the new value
+     * @param newValue      the new value
      * @return {@code true} if successful
      * @since 9
      */
     public final boolean weakCompareAndSetRelease(boolean expectedValue, boolean newValue) {
         return VALUE.weakCompareAndSetRelease(this,
-                                              (expectedValue ? 1 : 0),
-                                              (newValue ? 1 : 0));
+                (expectedValue ? 1 : 0),
+                (newValue ? 1 : 0));
     }
 
 }
