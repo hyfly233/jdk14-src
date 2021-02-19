@@ -113,6 +113,8 @@ public class Collections {
     private static final int INDEXOFSUBLIST_THRESHOLD = 35;
 
     /**
+     * 列表中的所有元素必须实现 Comparable 接口  列表中的所有元素都必须相互可比
+     * <p>
      * Sorts the specified list into ascending order, according to the
      * {@linkplain Comparable natural ordering} of its elements.
      * All elements in the list must implement the {@link Comparable}
@@ -178,6 +180,8 @@ public class Collections {
 
 
     /**
+     * 在进行此调用之前，必须根据列表元素的自然顺序将其按升序排序  如果未排序，则结果不确定  如果列表包含等于指定对象的多个元素，则不能保证将找到哪个元素
+     * <p>
      * Searches the specified list for the specified object using the binary
      * search algorithm.  The list must be sorted into ascending order
      * according to the {@linkplain Comparable natural ordering} of its
@@ -208,8 +212,7 @@ public class Collections {
      *                            integers), or the search key is not mutually comparable
      *                            with the elements of the list.
      */
-    public static <T>
-    int binarySearch(List<? extends Comparable<? super T>> list, T key) {
+    public static <T> int binarySearch(List<? extends Comparable<? super T>> list, T key) {
         if (list instanceof RandomAccess || list.size() < BINARYSEARCH_THRESHOLD) {
             return Collections.indexedBinarySearch(list, key);
         } else {
@@ -217,12 +220,13 @@ public class Collections {
         }
     }
 
-    private static <T>
-    int indexedBinarySearch(List<? extends Comparable<? super T>> list, T key) {
+    private static <T> int indexedBinarySearch(List<? extends Comparable<? super T>> list, T key) {
         int low = 0;
         int high = list.size() - 1;
 
+        /* 二分法 */
         while (low <= high) {
+            /* 按位右移补零操作符 左操作数的值按右操作数指定的位数右移，移动得到的空位以零填充 */
             int mid = (low + high) >>> 1;
             Comparable<? super T> midVal = list.get(mid);
             int cmp = midVal.compareTo(key);
